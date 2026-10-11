@@ -11,7 +11,7 @@ public final class NetConfig {
      * (see server/README.md and the deploy guide). The in-game
      * Settings -> Server field overrides this per device.
      */
-    public static final String DEFAULT_SERVER = "wss://tactshoot.onrender.com";
+    public static final String DEFAULT_SERVER = "wss://tactshoot-server.onrender.com";
 
     /** Fallback used by the queue screen when nothing is configured. */
     public static final String FALLBACK_DEV_SERVER = "ws://10.0.2.2:8080"; // Android emulator -> host PC
