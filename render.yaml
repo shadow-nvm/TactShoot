@@ -1,0 +1,11 @@
+# Render.com one-click blueprint for the TactShoot server.
+# Push this repo to GitHub, then in Render: New -> Blueprint -> select the repo.
+services:
+  - type: web
+    name: tactshoot-server
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    healthCheckPath: /health

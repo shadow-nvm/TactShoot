@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TactShoot - Mobile Multiplayer FPS</title>
+<style>
+  :root {
+    --bg: #0b0e14;
+    --bg2: #10151f;
+    --panel: #131a26;
+    --text: #e9edf2;
+    --dim: #8b96a6;
+    --accent: #ff8c1a;
+    --teal: #29b8a6;
+    --red: #eb3930;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: radial-gradient(1200px 600px at 50% -10%, #16202e 0%, var(--bg) 60%);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .wrap { width: min(920px, 94vw); padding: 40px 0 60px; }
+  header { text-align: center; margin-bottom: 34px; }
+  .logo { margin-bottom: 10px; }
+  h1 {
+    font-size: clamp(40px, 8vw, 72px);
+    letter-spacing: 0.12em;
+    font-weight: 800;
+  }
+  h1 .t2 { color: var(--accent); }
+  .tag { color: var(--dim); letter-spacing: 0.28em; font-size: 13px; margin-top: 6px; }
+  .status {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--panel); border: 1px solid #1f2a3a;
+    padding: 8px 18px; border-radius: 999px; margin-top: 18px;
+    font-size: 14px; color: var(--dim);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 10px var(--teal); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    background: linear-gradient(160deg, var(--bg2), var(--panel));
+    border: 1px solid #1f2a3a; border-radius: 16px; padding: 24px;
+  }
+  .card h2 { font-size: 17px; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 14px; }
+  .card p, .card li { color: var(--dim); font-size: 14.5px; line-height: 1.55; }
+  .card ul { list-style: none; }
+  .card li { padding: 5px 0; }
+  .card li::before { content: "\25B8"; color: var(--accent); margin-right: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { color: var(--dim); text-align: left; font-weight: 600; padding: 8px 10px; border-bottom: 1px solid #1f2a3a; letter-spacing: 0.08em; }
+  td { padding: 8px 10px; border-bottom: 1px solid #141c28; }
+  tr.top1 td:first-child { color: var(--accent); font-weight: 700; }
+  .badge { color: var(--teal); }
+  footer { margin-top: 40px; color: #556070; font-size: 12.5px; text-align: center; line-height: 1.6; }
+  a { color: var(--teal); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <svg class="logo" width="86" height="86" viewBox="0 0 100 100" fill="none">
+      <circle cx="50" cy="50" r="34" stroke="#ff8c1a" stroke-width="5"/>
+      <path d="M50 4 V20 M50 80 V96 M4 50 H20 M80 50 H96" stroke="#ff8c1a" stroke-width="5"/>
+      <circle cx="50" cy="50" r="7" fill="#ff8c1a"/>
+      <circle cx="50" cy="50" r="23" stroke="#34415a" stroke-width="2"/>
+    </svg>
+    <h1>TACT<span class="t2">SHOOT</span></h1>
+    <div class="tag">MOBILE MULTIPLAYER FPS</div>
+    <div class="status"><span class="dot"></span> Server online &mdash; matches running now</div>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <h2>ABOUT THE GAME</h2>
+      <p>TactShoot is a fast, free-to-play first-person shooter for Android. Real-time
+      shadows, dynamic skies, three handcrafted maps, five weapons and two game modes:
+      Team Deathmatch and Free For All.</p>
+      <ul style="margin-top:12px">
+        <li>Play online against real players - quick play or private rooms</li>
+        <li>No account needed: pick a callsign and drop in</li>
+        <li>Share a 4-letter room code to squad up with friends</li>
+        <li>Offline practice mode with smart AI bots (3 difficulties)</li>
+        <li>Zero ads, zero pay-to-win. Just aim.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>HOW TO PLAY</h2>
+      <ul>
+        <li>Install the TactShoot APK on any Android 7.0+ device</li>
+        <li>Open the game, set your callsign in Settings</li>
+        <li>Tap PLAY ONLINE, choose TDM or FFA</li>
+        <li>Or grab a room code from a friend and hit JOIN</li>
+        <li>Left thumb moves, right thumb aims, big button fires</li>
+        <li>Double-tap fire for auto-fire, tap ADS to zoom</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>TOP OPERATORS</h2>
+      <table id="leaderboard">
+        <thead><tr><th>#</th><th>NAME</th><th>KILLS</th><th>DEATHS</th><th>MATCHES</th></tr></thead>
+        <tbody><tr><td colspan="5">Loading...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h2>SERVER STATS</h2>
+      <p id="stats">Loading...</p>
+      <p style="margin-top:14px">This page is served directly by the TactShoot game server - the same
+      process hosting your matches. <a href="/api/stats">Raw stats API</a>.</p>
+    </div>
+  </div>
+
+  <footer>
+    TactShoot &copy; 2026 &mdash; free fan-made project. This server is open source:
+    host your own instance anywhere Node.js runs.
+  </footer>
+</div>
+<script>
+  fetch('/api/stats')
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('stats').textContent =
+        `${d.matches} matches played - ${d.totalKills} total eliminations`;
+      const tb = document.querySelector('#leaderboard tbody');
+      if (!d.top || d.top.length === 0) {
+        tb.innerHTML = '<tr><td colspan="5">No matches yet - be the first legend!</td></tr>';
+        return;
+      }
+      tb.innerHTML = d.top.map((p, i) => `
+        <tr class="${i === 0 ? 'top1' : ''}">
+          <td>${i + 1}</td><td>${escapeHtml(p.name)}</td>
+          <td class="badge">${p.kills}</td><td>${p.deaths}</td><td>${p.matches}</td>
+        </tr>`).join('');
+    })
+    .catch(() => {
+      document.getElementById('stats').textContent = 'Stats unavailable right now.';
+    });
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+</script>
+</body>
+</html>

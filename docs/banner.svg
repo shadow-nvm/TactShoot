@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="420" viewBox="0 0 1280 420">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0d1524"/>
+      <stop offset="0.62" stop-color="#24405f"/>
+      <stop offset="0.78" stop-color="#c77b3a"/>
+      <stop offset="1" stop-color="#3a2c20"/>
+    </linearGradient>
+    <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd9a0"/>
+      <stop offset="1" stop-color="#ff8c1a"/>
+    </linearGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6e5b45"/>
+      <stop offset="1" stop-color="#241c15"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="420" fill="url(#sky)"/>
+  <circle cx="1010" cy="200" r="46" fill="url(#sun)"/>
+  <!-- stars -->
+  <g fill="#cfd8e6">
+    <circle cx="120" cy="60" r="1.6"/><circle cx="300" cy="110" r="1.2"/><circle cx="460" cy="50" r="1.5"/>
+    <circle cx="610" cy="130" r="1.1"/><circle cx="760" cy="70" r="1.7"/><circle cx="880" cy="120" r="1.2"/>
+    <circle cx="150" cy="160" r="1.0"/><circle cx="540" cy="200" r="1.0"/>
+  </g>
+  <!-- ground -->
+  <rect x="0" y="330" width="1280" height="90" fill="url(#ground)"/>
+  <!-- skyline -->
+  <g fill="#1a2230">
+    <rect x="0" y="270" width="70" height="60"/>
+    <rect x="85" y="240" width="55" height="90"/>
+    <rect x="160" y="285" width="80" height="45"/>
+    <rect x="1150" y="260" width="60" height="70"/>
+    <rect x="1225" y="290" width="55" height="40"/>
+  </g>
+  <g fill="#232e42">
+    <rect x="30" y="252" width="34" height="8"/><rect x="30" y="266" width="34" height="8"/>
+    <rect x="102" y="222" width="26" height="7"/><rect x="102" y="234" width="26" height="7"/>
+  </g>
+  <!-- logo crosshair -->
+  <g transform="translate(190,210)">
+    <circle cx="0" cy="0" r="118" fill="none" stroke="#ff8c1a" stroke-width="16"/>
+    <rect x="-10" y="-176" width="20" height="58" rx="6" fill="#ff8c1a"/>
+    <rect x="-10" y="118" width="20" height="58" rx="6" fill="#ff8c1a"/>
+    <rect x="-176" y="-10" width="58" height="20" rx="6" fill="#ff8c1a"/>
+    <rect x="118" y="-10" width="58" height="20" rx="6" fill="#ff8c1a"/>
+    <circle cx="0" cy="0" r="22" fill="#ff8c1a"/>
+    <circle cx="0" cy="0" r="80" fill="none" stroke="#34415a" stroke-width="6"/>
+  </g>
+  <!-- title -->
+  <text x="360" y="235" font-family="Segoe UI, Arial, sans-serif" font-size="120" font-weight="800"
+        letter-spacing="14" fill="#e9edf2">TACT</text>
+  <text x="620" y="235" font-family="Segoe UI, Arial, sans-serif" font-size="120" font-weight="800"
+        letter-spacing="14" fill="#ff8c1a">SHOOT</text>
+  <text x="368" y="282" font-family="Segoe UI, Arial, sans-serif" font-size="20"
+        letter-spacing="12" fill="#8b96a6">MOBILE MULTIPLAYER FPS</text>
+  <!-- bullet tracer -->
+  <g opacity="0.9">
+    <line x1="60" y1="380" x2="1240" y2="300" stroke="#ffd9a0" stroke-width="3"/>
+    <circle cx="1240" cy="300" r="7" fill="#ff8c1a"/>
+    <circle cx="1240" cy="300" r="16" fill="none" stroke="#ff8c1a" stroke-width="2" opacity="0.6"/>
+  </g>
+</svg>
