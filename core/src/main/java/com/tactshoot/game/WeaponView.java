@@ -48,7 +48,7 @@ public class WeaponView {
 
     public void update(float dt, PlayerEntity e, float speed) {
         Weapons.Spec s = Weapons.spec(specIdx);
-        adsAmount += (e.aiming ? 1f : 0f - adsAmount) * T.damp(13f, dt);
+        adsAmount += ((e.aiming ? 1f : 0f) - adsAmount) * T.damp(13f, dt);
         kick = Math.max(0f, kick - kick * 9f * dt - 0.001f);
         recoilVis = Math.max(0f, recoilVis - recoilVis * 11f * dt - 0.0005f);
         reloadAmount += ((e.reloadTimer > 0f ? 1f : 0f) - reloadAmount) * T.damp(11f, dt);

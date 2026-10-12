@@ -257,14 +257,16 @@ function endMatch(room) {
   const list = room.players.map((p) => ({
     id: p.id, name: p.name, kills: p.kills, deaths: p.deaths, score: p.score,
   }));
+  const topKills = room.mode === 'tdm'
+    ? 0
+    : room.players.reduce((top, p) => Math.max(top, p.kills), 0);
   for (const p of room.players) {
     let win;
     if (room.mode === 'tdm') {
-      win = (room.scoreA > room.scoreB && p.team === 0) || (room.scoreB > room.scoreA && p.team === 1);
+      // Team 1 contributes to scoreA; team 0 contributes to scoreB.
+      win = (room.scoreA > room.scoreB && p.team === 1) || (room.scoreB > room.scoreA && p.team === 0);
     } else {
-      let top = p;
-      for (const o of room.players) if (o.score > top.score) top = o;
-      win = top.id === p.id;
+      win = p.kills === topKills;
     }
     statName(p.name).matches++;
     send(p.ws, { t: 'ev', e: 'end', win, scores: list });

@@ -2,6 +2,8 @@ package com.tactshoot.game;
 
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.utils.Array;
 
 /** Application entry point. */
 public class TactShootGame extends Game {
@@ -11,6 +13,7 @@ public class TactShootGame extends Game {
     public final Platform platform;
     public Assets assets;
     public Settings settings;
+    private final Array<Screen> retiredScreens = new Array<Screen>(false, 4);
 
     public TactShootGame(Platform platform) {
         this.platform = platform;
@@ -32,8 +35,37 @@ public class TactShootGame extends Game {
     }
 
     @Override
+    public void setScreen(Screen next) {
+        Screen previous = getScreen();
+        if (previous == next) return;
+        boolean retainPrevious = next instanceof SettingsScreen
+                && ((SettingsScreen) next).returnsTo(previous);
+        retiredScreens.removeValue(next, true);
+        super.setScreen(next);
+        if (previous != null && !retainPrevious && !retiredScreens.contains(previous, true)) {
+            retiredScreens.add(previous);
+        }
+    }
+
+    @Override
+    public void render() {
+        super.render();
+        disposeRetiredScreens();
+    }
+
+    private void disposeRetiredScreens() {
+        Screen active = getScreen();
+        for (int i = retiredScreens.size - 1; i >= 0; i--) {
+            Screen retired = retiredScreens.get(i);
+            if (retired != active) retired.dispose();
+        }
+        retiredScreens.clear();
+    }
+
+    @Override
     public void dispose() {
         super.dispose();
+        disposeRetiredScreens();
         if (assets != null) assets.dispose();
     }
 }

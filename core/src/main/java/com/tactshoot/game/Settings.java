@@ -32,7 +32,7 @@ public final class Settings {
         try {
             prefs = Gdx.app != null ? Gdx.app.getPreferences("tactshoot") : null;
         } catch (Throwable t) {
-            Gdx.app.error("TactShoot", "Preferences init failed: " + t.getMessage());
+            if (Gdx.app != null) Gdx.app.error("TactShoot", "Preferences init failed: " + t.getMessage());
             prefs = null;
         }
     }
@@ -50,7 +50,7 @@ public final class Settings {
                 leftHanded = prefs.getBoolean(LEFT_HANDED, false);
                 usernameSet = prefs.getBoolean(USERNAME_SET, false);
             } catch (Throwable t) {
-                Gdx.app.error("TactShoot", "Preferences load error: " + t.getMessage());
+                if (Gdx.app != null) Gdx.app.error("TactShoot", "Preferences load error: " + t.getMessage());
             }
         }
         if (playerName == null || playerName.trim().isEmpty()) {
@@ -64,6 +64,7 @@ public final class Settings {
             playerName = "Ranger" + MathUtils.random(100, 999);
         }
         playerName = playerName.replaceAll("[^\\p{L}\\p{N} _\\-.]", "").trim();
+        if (playerName.isEmpty()) playerName = "Ranger" + MathUtils.random(100, 999);
         if (playerName.length() > 16) playerName = playerName.substring(0, 16);
         sensitivity = MathUtils.clamp(sensitivity, 0.3f, 3.0f);
         quality = MathUtils.clamp(quality, 0, 2);
@@ -72,6 +73,7 @@ public final class Settings {
 
     public void save() {
         sanitize();
+        if (prefs == null) return;
         prefs.putString(NAME, playerName);
         prefs.putFloat(SENS, sensitivity);
         prefs.putInteger(QUALITY, quality);

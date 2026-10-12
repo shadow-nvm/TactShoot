@@ -1,6 +1,7 @@
 package com.tactshoot.game;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
@@ -21,6 +22,8 @@ public class SettingsScreen extends ScreenAdapter {
     private final TactShootGame game;
     private final Assets assets;
     private final Settings settings;
+    private final Screen returnScreen;
+    private boolean returningToMatch;
 
     private Stage stage;
     private TextField nameField, serverField;
@@ -30,9 +33,14 @@ public class SettingsScreen extends ScreenAdapter {
     private int quality;
 
     public SettingsScreen(TactShootGame game) {
+        this(game, null);
+    }
+
+    public SettingsScreen(TactShootGame game, Screen returnScreen) {
         this.game = game;
         this.assets = game.assets;
         this.settings = game.settings;
+        this.returnScreen = returnScreen;
         sens = settings.sensitivity;
         fov = settings.fov;
         quality = settings.quality;
@@ -54,7 +62,8 @@ public class SettingsScreen extends ScreenAdapter {
 
         Label nameL = new Label("CALLSIGN", assets.skin, "small");
         nameField = new TextField(settings.playerName, assets.skin);
-        nameField.setTextFieldFilter((field, c) -> Character.isLetterOrDigit(c) && field.getText().length() < 16);
+        nameField.setTextFieldFilter((field, c) -> (Character.isLetterOrDigit(c) || c == ' '
+                || c == '_' || c == '-' || c == '.') && field.getText().length() < 16);
         panel.add(nameL).right().padRight(14).pad(6);
         panel.add(nameField).width(340 * us).height(52 * us).pad(6).row();
 
@@ -127,7 +136,7 @@ public class SettingsScreen extends ScreenAdapter {
             public void clicked(InputEvent event, float x, float y) {
                 assets.play(Assets.S_CLICK);
                 save();
-                game.setScreen(new MenuScreen(game));
+                returnToPreviousScreen();
             }
         });
         panel.add(save).colspan(2).width(420 * us).height(66 * us).padTop(10).row();
@@ -137,7 +146,7 @@ public class SettingsScreen extends ScreenAdapter {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 assets.play(Assets.S_CLICK);
-                game.setScreen(new MenuScreen(game));
+                returnToPreviousScreen();
             }
         });
         panel.add(back).colspan(2).width(420 * us).height(56 * us).pad(6);
@@ -164,6 +173,19 @@ public class SettingsScreen extends ScreenAdapter {
         assets.setSoundOn(settings.soundOn);
     }
 
+    private void returnToPreviousScreen() {
+        if (returnScreen == null) {
+            game.setScreen(new MenuScreen(game));
+        } else {
+            returningToMatch = true;
+            game.setScreen(returnScreen);
+        }
+    }
+
+    boolean returnsTo(Screen screen) {
+        return returnScreen != null && returnScreen == screen;
+    }
+
     @Override
     public void show() {
         Gdx.input.setInputProcessor(stage);
@@ -184,6 +206,7 @@ public class SettingsScreen extends ScreenAdapter {
 
     @Override
     public void dispose() {
-        stage.dispose();
+        if (stage != null) stage.dispose();
+        if (returnScreen != null && !returningToMatch) returnScreen.dispose();
     }
 }

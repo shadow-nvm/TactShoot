@@ -146,11 +146,13 @@ public class BotAI {
             if (b.pathIdx >= b.path.size && b.botRepathTimer <= 0f) {
                 b.botRepathTimer = MathUtils.random(3f, 7f);
                 Vector3 dest = nav.randomOpen(b.pos.x, b.pos.z);
-                Array<Vector3> p = nav.findPath(b.pos.x, b.pos.z, dest.x, dest.z);
-                if (p != null) {
-                    b.path.clear();
-                    b.path.addAll(p);
-                    b.pathIdx = 0;
+                if (dest != null) {
+                    Array<Vector3> p = nav.findPath(b.pos.x, b.pos.z, dest.x, dest.z);
+                    if (p != null && p.size > 0) {
+                        b.path.clear();
+                        b.path.addAll(p);
+                        b.pathIdx = 0;
+                    }
                 }
             }
         }

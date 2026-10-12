@@ -5,6 +5,7 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
@@ -15,6 +16,7 @@ public class TouchControls implements InputProcessor {
 
     public final InputState state = new InputState();
     private boolean enabled = true;
+    private boolean autoFireEnabled = true;
 
     private int w, h;
     private float sens = 1f;
@@ -31,6 +33,10 @@ public class TouchControls implements InputProcessor {
     private boolean adsToggle = false;
     private boolean crouchToggle = false;
     private boolean scoreToggle = false;
+
+    private static final Color BUTTON_FILL = new Color(1f, 1f, 1f, 0.09f);
+    private static final Color BUTTON_BORDER = new Color(1f, 1f, 1f, 0.30f);
+    private final GlyphLayout iconLayout = new GlyphLayout();
 
     // button layout (fractions of screen)
     private static final float FIRE_X = 0.875f, FIRE_Y = 0.26f, FIRE_R = 0.145f;
@@ -103,6 +109,14 @@ public class TouchControls implements InputProcessor {
         sens = s;
     }
 
+    public void setAutoFireEnabled(boolean enabled) {
+        autoFireEnabled = enabled;
+        if (!enabled) {
+            fireLock = false;
+            lastTapTime = -10f;
+        }
+    }
+
     public void releaseFireLock() {
         fireLock = false;
     }
@@ -155,15 +169,17 @@ public class TouchControls implements InputProcessor {
             fireHeld = true;
             firePointer = pointer;
             // double-tap detection for auto-fire lock
-            long now = System.currentTimeMillis();
-            if (now - lastTapTime < 320f && Math.abs(x - fireTapX) < fr()
-                    && Math.abs(y - fireTapY) < fr()) {
-                fireLock = !fireLock;
-                lastTapTime = -10f;
-            } else {
-                lastTapTime = now;
-                fireTapX = x;
-                fireTapY = y;
+            if (autoFireEnabled) {
+                long now = System.currentTimeMillis();
+                if (now - lastTapTime < 320f && Math.abs(x - fireTapX) < fr()
+                        && Math.abs(y - fireTapY) < fr()) {
+                    fireLock = !fireLock;
+                    lastTapTime = -10f;
+                } else {
+                    lastTapTime = now;
+                    fireTapX = x;
+                    fireTapY = y;
+                }
             }
             return true;
         }
@@ -293,27 +309,25 @@ public class TouchControls implements InputProcessor {
         Gdx.gl20.glEnable(com.badlogic.gdx.Gdx.gl20.GL_BLEND);
         Gdx.gl20.glBlendFunc(com.badlogic.gdx.Gdx.gl20.GL_SRC_ALPHA,
                 com.badlogic.gdx.Gdx.gl20.GL_ONE_MINUS_SRC_ALPHA);
-        Color fill = new Color(1f, 1f, 1f, 0.09f);
-        Color border = new Color(1f, 1f, 1f, 0.30f);
         Color active = Palette.ACCENT;
         sr.begin(ShapeRenderer.ShapeType.Filled);
         // move joystick
         if (movePointer != -1) {
-            sr.setColor(fill);
+            sr.setColor(BUTTON_FILL);
             sr.circle(stickOrigin.x, stickOrigin.y, Math.min(w, h) * 0.16f);
             sr.setColor(active.r, active.g, active.b, 0.35f);
             sr.circle(stickCur.x, stickCur.y, Math.min(w, h) * 0.055f);
         }
         // buttons
-        drawButton(sr, fx(), fy(), fr(), fireHeld || fireLock, fill, border, active);
-        drawButton(sr, ax(), ay(), ar(), adsToggle, fill, border, active);
-        drawButton(sr, rx(), ry(), rr(), false, fill, border, active);
-        drawButton(sr, sx(), sy(), sr(), false, fill, border, active);
-        drawButton(sr, gx(), gy(), gr(), false, fill, border, active);
-        drawButton(sr, jx(), jy(), jr(), false, fill, border, active);
-        drawButton(sr, cx(), cy(), cr(), crouchToggle, fill, border, active);
-        drawButton(sr, px(), py(), pr(), false, fill, border, active);
-        drawButton(sr, hx(), hy(), hr(), false, fill, border, active);
+        drawButton(sr, fx(), fy(), fr(), fireHeld || fireLock, BUTTON_FILL, BUTTON_BORDER, active);
+        drawButton(sr, ax(), ay(), ar(), adsToggle, BUTTON_FILL, BUTTON_BORDER, active);
+        drawButton(sr, rx(), ry(), rr(), false, BUTTON_FILL, BUTTON_BORDER, active);
+        drawButton(sr, sx(), sy(), sr(), false, BUTTON_FILL, BUTTON_BORDER, active);
+        drawButton(sr, gx(), gy(), gr(), false, BUTTON_FILL, BUTTON_BORDER, active);
+        drawButton(sr, jx(), jy(), jr(), false, BUTTON_FILL, BUTTON_BORDER, active);
+        drawButton(sr, cx(), cy(), cr(), crouchToggle, BUTTON_FILL, BUTTON_BORDER, active);
+        drawButton(sr, px(), py(), pr(), false, BUTTON_FILL, BUTTON_BORDER, active);
+        drawButton(sr, hx(), hy(), hr(), false, BUTTON_FILL, BUTTON_BORDER, active);
         sr.end();
 
         batch.begin();
@@ -346,9 +360,8 @@ public class TouchControls implements InputProcessor {
 
     private void drawIcon(SpriteBatch batch, BitmapFont f, Assets assets, String text,
                           float x, float y, float r) {
-        com.badlogic.gdx.graphics.g2d.GlyphLayout gl = new com.badlogic.gdx.graphics.g2d.GlyphLayout();
-        gl.setText(f, text);
+        iconLayout.setText(f, text);
         f.setColor(1f, 1f, 1f, 0.75f);
-        f.draw(batch, text, x - gl.width / 2f, y + gl.height / 2f - r * 0.12f);
+        f.draw(batch, text, x - iconLayout.width / 2f, y + iconLayout.height / 2f - r * 0.12f);
     }
 }

@@ -149,6 +149,7 @@ public class GameScreen extends ScreenAdapter implements
         if (platform.isAndroid()) {
             touch = new TouchControls();
             touch.setSensitivity(1f);
+            touch.setAutoFireEnabled(settings.autoFire);
         } else {
             desk = new DesktopControls();
             desk.setSensitivity(1f);
@@ -171,7 +172,6 @@ public class GameScreen extends ScreenAdapter implements
         if (online && cfg.matchPayload != null) {
             handleMatch(cfg.matchPayload);
         } else if (!online) {
-            setupMap(cfg.mapIdx);
             startPracticeMatch();
         }
 
@@ -188,6 +188,10 @@ public class GameScreen extends ScreenAdapter implements
     // ================================================================ setup
 
     private void applyQuality() {
+        if (shadowLight != null) {
+            shadowLight.dispose();
+            shadowLight = null;
+        }
         env.clear();
         env.set(new ColorAttribute(ColorAttribute.AmbientLight, map == null ? 0.4f : map.ambient.r,
                 map == null ? 0.4f : map.ambient.g, map == null ? 0.4f : map.ambient.b, 1f));
@@ -230,7 +234,9 @@ public class GameScreen extends ScreenAdapter implements
     private void startPracticeMatch() {
         setupMap(cfg.mapIdx);
         // bots
-        for (int i = 0; i < cfg.botCount; i++) {
+        int maxBots = cfg.isTdm() ? NetConfig.MAX_PLAYERS - 1 : NetConfig.FFA_PLAYERS - 1;
+        int botCount = MathUtils.clamp(cfg.botCount, 1, maxBots);
+        for (int i = 0; i < botCount; i++) {
             PlayerEntity bot = new PlayerEntity();
             bot.isBot = true;
             bot.name = Names.random();
@@ -749,13 +755,17 @@ public class GameScreen extends ScreenAdapter implements
         if (ended) return;
         if (cfg.isTdm()) {
             if (scoreA >= NetConfig.TDM_KILL_LIMIT || scoreB >= NetConfig.TDM_KILL_LIMIT) {
-                boolean win = (scoreA >= NetConfig.TDM_KILL_LIMIT && local.team == 0)
-                        || (scoreB >= NetConfig.TDM_KILL_LIMIT && local.team == 1);
+                // scoreA belongs to team 1 and scoreB belongs to team 0.
+                boolean win = (scoreA >= NetConfig.TDM_KILL_LIMIT && local.team == 1)
+                        || (scoreB >= NetConfig.TDM_KILL_LIMIT && local.team == 0);
                 endMatch(win, "TEAM DEATHMATCH");
             }
         } else {
-            if (local.kills >= NetConfig.FFA_KILL_LIMIT) {
-                endMatch(true, "FREE FOR ALL");
+            for (PlayerEntity player : players) {
+                if (player.kills >= NetConfig.FFA_KILL_LIMIT) {
+                    endMatch(player == local, "FREE FOR ALL");
+                    break;
+                }
             }
         }
     }
@@ -857,8 +867,7 @@ public class GameScreen extends ScreenAdapter implements
 
     @Override
     public void onSettings() {
-        // open settings overlay later; for now simple toast
-        hud.toast("Settings are available from the main menu");
+        game.setScreen(new SettingsScreen(game, this));
     }
 
     @Override
@@ -962,7 +971,13 @@ public class GameScreen extends ScreenAdapter implements
     @Override
     public void show() {
         Gdx.input.setInputProcessor(multiplexer);
-        Gdx.input.setCursorCatched(!platform.isAndroid());
+        Gdx.input.setCursorCatched(!platform.isAndroid() && !paused);
+        if (paused) {
+            shadows = settings.quality >= 1;
+            postOn = settings.quality >= 1;
+            applyQuality();
+            if (touch != null) touch.setAutoFireEnabled(settings.autoFire);
+        }
     }
 
     @Override
@@ -996,6 +1011,10 @@ public class GameScreen extends ScreenAdapter implements
         if (uiBatch != null) uiBatch.dispose();
         if (sr != null) sr.dispose();
         if (batch != null) batch.dispose();
+        if (shadowLight != null) {
+            shadowLight.dispose();
+            shadowLight = null;
+        }
     }
 
     // ================================================================ update
@@ -1088,7 +1107,8 @@ public class GameScreen extends ScreenAdapter implements
                 if (!online) {
                     boolean win;
                     if (cfg.isTdm()) {
-                        win = (scoreA > scoreB && local.team == 0) || (scoreB > scoreA && local.team == 1);
+                        win = (scoreA > scoreB && local.team == 1)
+                                || (scoreB > scoreA && local.team == 0);
                     } else {
                         win = true;
                         for (PlayerEntity p : players) {

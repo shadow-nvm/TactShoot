@@ -16,6 +16,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.ObjectMap;
+import com.badlogic.gdx.utils.ObjectSet;
 
 /** Central asset cache: textures, fonts, sounds, models, shaders, maps. */
 public class Assets implements Disposable {
@@ -341,6 +342,17 @@ public class Assets implements Disposable {
         if (gunPistol != null) gunPistol.dispose();
         if (soldierModel != null) soldierModel.dispose();
         if (worldModels != null) for (Model m : worldModels) if (m != null) m.dispose();
+        if (worldProps != null) {
+            ObjectSet<Model> propModels = new ObjectSet<Model>();
+            for (Array<ModelInstance> instances : worldProps) {
+                if (instances == null) continue;
+                for (ModelInstance instance : instances) {
+                    if (instance != null && instance.model != null && propModels.add(instance.model)) {
+                        instance.model.dispose();
+                    }
+                }
+            }
+        }
         if (skyShader != null) skyShader.dispose();
         if (postShader != null) postShader.dispose();
         if (particleShader != null) particleShader.dispose();

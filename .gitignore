@@ -4,6 +4,12 @@ build/
 **/build/
 local.properties
 
+# Locally generated game/runtime and Android packaging artifacts
+*.apk
+/android/release/
+/android/src/main/jniLibs/
+/assets/tsnd/
+
 # IDE
 .idea/
 *.iml

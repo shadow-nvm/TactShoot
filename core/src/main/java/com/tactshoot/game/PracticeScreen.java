@@ -7,6 +7,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Slider;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
@@ -28,6 +29,7 @@ public class PracticeScreen extends ScreenAdapter {
     private float botLevel = 0.5f;
 
     private TextButton tdmBtn, ffaBtn;
+    private Slider botSlider;
     private final TextButton[] mapBtns = new TextButton[3];
     private final TextButton[] weaponBtns = new TextButton[3];
     private Label botLabel, diffLabel;
@@ -117,7 +119,7 @@ public class PracticeScreen extends ScreenAdapter {
         // bot count
         botLabel = new Label("BOTS: 7", assets.skin, "small");
         panel.add(botLabel).left().padLeft(10).row();
-        Slider botSlider = new Slider(1f, 11f, 1f, false, assets.skin);
+        botSlider = new Slider(1f, NetConfig.MAX_PLAYERS - 1, 1f, false, assets.skin);
         botSlider.setValue(botCount);
         botSlider.addListener(new ChangeListener() {
             @Override
@@ -169,7 +171,10 @@ public class PracticeScreen extends ScreenAdapter {
         });
         panel.add(back).width(430 * us).height(56 * us).pad(4);
 
-        root.add(panel);
+        ScrollPane scroll = new ScrollPane(panel, assets.skin);
+        scroll.setFadeScrollBars(false);
+        scroll.setScrollingDisabled(true, false);
+        root.add(scroll).expand().fill().pad(8 * us);
         stage.addActor(root);
         refresh();
     }
@@ -181,6 +186,11 @@ public class PracticeScreen extends ScreenAdapter {
     }
 
     private void refresh() {
+        int maxBots = mode.equals("ffa") ? NetConfig.FFA_PLAYERS - 1 : NetConfig.MAX_PLAYERS - 1;
+        botSlider.setRange(1f, maxBots);
+        botCount = MathUtils.clamp(botCount, 1, maxBots);
+        botSlider.setValue(botCount);
+        botLabel.setText("BOTS: " + botCount);
         tdmBtn.setStyle(assets.skin.get(mode.equals("tdm") ? "accent" : "default",
                 TextButton.TextButtonStyle.class));
         ffaBtn.setStyle(assets.skin.get(mode.equals("ffa") ? "accent" : "default",
