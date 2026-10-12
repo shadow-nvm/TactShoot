@@ -22,7 +22,7 @@ public class AndroidLauncher extends AndroidApplication implements Platform {
         cfg.useAccelerometer = false;
         cfg.useCompass = false;
         cfg.useImmersiveMode = true;
-        cfg.renderUnderCutout = true;
+        cfg.renderUnderCutout = Build.VERSION.SDK_INT >= 28;
         cfg.disableAudio = false;
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         initialize(new TactShootGame(this), cfg);

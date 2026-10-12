@@ -29,22 +29,33 @@ public final class Settings {
     private com.badlogic.gdx.Preferences prefs;
 
     public Settings() {
-        prefs = Gdx.app.getPreferences("tactshoot");
+        try {
+            prefs = Gdx.app != null ? Gdx.app.getPreferences("tactshoot") : null;
+        } catch (Throwable t) {
+            Gdx.app.error("TactShoot", "Preferences init failed: " + t.getMessage());
+            prefs = null;
+        }
     }
 
     public void load() {
-        playerName = prefs.getString(NAME, "");
-        if (playerName.isEmpty()) {
+        if (prefs != null) {
+            try {
+                playerName = prefs.getString(NAME, "");
+                sensitivity = prefs.getFloat(SENS, 1.0f);
+                quality = prefs.getInteger(QUALITY, 1);
+                soundOn = prefs.getBoolean(SOUND, true);
+                fov = prefs.getInteger(FOV, 75);
+                server = prefs.getString(SERVER, "");
+                autoFire = prefs.getBoolean(AUTO_FIRE, true);
+                leftHanded = prefs.getBoolean(LEFT_HANDED, false);
+                usernameSet = prefs.getBoolean(USERNAME_SET, false);
+            } catch (Throwable t) {
+                Gdx.app.error("TactShoot", "Preferences load error: " + t.getMessage());
+            }
+        }
+        if (playerName == null || playerName.trim().isEmpty()) {
             playerName = "Ranger" + MathUtils.random(100, 999);
         }
-        sensitivity = prefs.getFloat(SENS, 1.0f);
-        quality = prefs.getInteger(QUALITY, 1);
-        soundOn = prefs.getBoolean(SOUND, true);
-        fov = prefs.getInteger(FOV, 75);
-        server = prefs.getString(SERVER, "");
-        autoFire = prefs.getBoolean(AUTO_FIRE, true);
-        leftHanded = prefs.getBoolean(LEFT_HANDED, false);
-        usernameSet = prefs.getBoolean(USERNAME_SET, false);
         sanitize();
     }
 

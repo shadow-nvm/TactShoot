@@ -20,17 +20,30 @@ public class PostFx {
     }
 
     public void resize(int width, int height) {
-        if (fbo != null) fbo.dispose();
-        fbo = new FrameBuffer(Pixmap.Format.RGB888, width, height, true);
+        if (fbo != null) {
+            try { fbo.dispose(); } catch (Exception ignored) {}
+            fbo = null;
+        }
+        try {
+            fbo = new FrameBuffer(Pixmap.Format.RGBA8888, width, height, true);
+        } catch (Exception e1) {
+            try {
+                // Fallback without depth buffer if hardware attachment failed
+                fbo = new FrameBuffer(Pixmap.Format.RGBA8888, width, height, false);
+            } catch (Exception e2) {
+                Gdx.app.error("TactShoot", "FrameBuffer creation failed: " + e2.getMessage());
+            }
+        }
         w = width;
         h = height;
     }
 
     public void begin() {
-        fbo.begin();
+        if (fbo != null) fbo.begin();
     }
 
     public void end() {
+        if (fbo == null) return;
         fbo.end();
         Gdx.gl.glClearColor(0f, 0f, 0f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);

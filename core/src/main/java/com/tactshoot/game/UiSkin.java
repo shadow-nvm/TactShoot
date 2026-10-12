@@ -21,6 +21,8 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 public final class UiSkin {
 
     public static Skin build(BitmapFont font, BitmapFont fontSmall) {
+        if (font == null) font = new BitmapFont();
+        if (fontSmall == null) fontSmall = new BitmapFont();
         Skin skin = new Skin();
 
         // ---------- drawables ----------

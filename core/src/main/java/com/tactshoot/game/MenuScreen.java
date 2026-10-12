@@ -51,17 +51,23 @@ public class MenuScreen extends ScreenAdapter {
         sc.numDirectionalLights = 1;
         sc.numPointLights = 0;
         batch = new ModelBatch(new DefaultShaderProvider(sc));
-        cam = new PerspectiveCamera(65, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        int w = Gdx.graphics != null && Gdx.graphics.getWidth() > 0 ? Gdx.graphics.getWidth() : 1280;
+        int h = Gdx.graphics != null && Gdx.graphics.getHeight() > 0 ? Gdx.graphics.getHeight() : 720;
+        cam = new PerspectiveCamera(65, w, h);
         cam.near = 0.1f;
         cam.far = 250f;
 
-        MapDef map = assets.maps[0];
-        worldModel = assets.worldModels[0];
-        worldInst = new ModelInstance(worldModel);
-        env = new Environment();
-        env.set(new ColorAttribute(ColorAttribute.AmbientLight, map.ambient.r, map.ambient.g, map.ambient.b, 1f));
-        env.add(new DirectionalLight().set(map.sunColor, new Vector3(map.sunDir).scl(-1f)));
-        sky = new Atmosphere(assets);
+        if (assets != null && assets.maps != null && assets.maps.length > 0) {
+            MapDef map = assets.maps[0];
+            if (assets.worldModels != null && assets.worldModels.length > 0 && assets.worldModels[0] != null) {
+                worldModel = assets.worldModels[0];
+                worldInst = new ModelInstance(worldModel);
+            }
+            env = new Environment();
+            env.set(new ColorAttribute(ColorAttribute.AmbientLight, map.ambient.r, map.ambient.g, map.ambient.b, 1f));
+            env.add(new DirectionalLight().set(map.sunColor, new Vector3(map.sunDir).scl(-1f)));
+            sky = new Atmosphere(assets);
+        }
 
         stage = new Stage(new ScreenViewport());
         uiBatch = new SpriteBatch();
@@ -142,13 +148,19 @@ public class MenuScreen extends ScreenAdapter {
         cam.up.set(0f, 1f, 0f);
         cam.update();
 
-        MapDef map = assets.maps[0];
-        Gdx.gl.glClearColor(map.skyHorizon.r, map.skyHorizon.g, map.skyHorizon.b, 1f);
+        MapDef map = assets != null && assets.maps != null && assets.maps.length > 0 ? assets.maps[0] : null;
+        if (map != null) {
+            Gdx.gl.glClearColor(map.skyHorizon.r, map.skyHorizon.g, map.skyHorizon.b, 1f);
+        } else {
+            Gdx.gl.glClearColor(0.08f, 0.09f, 0.12f, 1f);
+        }
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
-        sky.render(cam, map);
-        batch.begin(cam);
-        batch.render(worldInst, env);
-        batch.end();
+        if (sky != null && map != null) sky.render(cam, map);
+        if (batch != null && worldInst != null && env != null) {
+            batch.begin(cam);
+            batch.render(worldInst, env);
+            batch.end();
+        }
 
         stage.act(delta);
         stage.draw();

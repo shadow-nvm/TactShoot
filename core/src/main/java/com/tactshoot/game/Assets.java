@@ -55,32 +55,48 @@ public class Assets implements Disposable {
 
     public void load(Settings settings) {
         soundOn = settings.soundOn;
-        uiScale = MathUtils.clamp(Gdx.graphics.getHeight() / 720f, 0.8f, 1.6f);
+        float h = Gdx.graphics != null ? Gdx.graphics.getHeight() : 720f;
+        if (h <= 0) h = 720f;
+        uiScale = MathUtils.clamp(h / 720f, 0.8f, 1.6f);
 
-        loadSprites();
-        loadFonts();
-        skin = UiSkin.build(font, fontSmall);
-        loadSounds();
-        loadShaders();
-        loadTextures();
-        loadModels();
-        loadMaps();
+        try { loadSprites(); } catch (Throwable t) { Gdx.app.error("TactShoot", "loadSprites fail", t); }
+        try { loadFonts(); } catch (Throwable t) { Gdx.app.error("TactShoot", "loadFonts fail", t); }
+        try { skin = UiSkin.build(font, fontSmall); } catch (Throwable t) { Gdx.app.error("TactShoot", "skin fail", t); }
+        try { loadSounds(); } catch (Throwable t) { Gdx.app.error("TactShoot", "loadSounds fail", t); }
+        try { loadShaders(); } catch (Throwable t) { Gdx.app.error("TactShoot", "loadShaders fail", t); }
+        try { loadTextures(); } catch (Throwable t) { Gdx.app.error("TactShoot", "loadTextures fail", t); }
+        try { loadModels(); } catch (Throwable t) { Gdx.app.error("TactShoot", "loadModels fail", t); }
+        try { loadMaps(); } catch (Throwable t) { Gdx.app.error("TactShoot", "loadMaps fail", t); }
     }
 
     private void loadSprites() {
-        dot = new Texture(TexGen.softDot(64, Color.WHITE, 1f));
-        dot.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-        crosshairTex = new Texture(TexGen.crosshair(96, new Color(0.3f, 1f, 0.5f, 1f)));
-        crosshairTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-        hitmarkerTex = new Texture(TexGen.hitmarker(96, Palette.ACCENT));
-        hitmarkerTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-        flashTex = new Texture(TexGen.flash(128));
-        flashTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-        FileHandle logoF = Gdx.files.internal("ui/logo.png");
-        if (logoF.exists()) {
-            logo = new Texture(logoF);
-            logo.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-        }
+        try {
+            dot = new Texture(TexGen.softDot(64, Color.WHITE, 1f));
+            dot.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        } catch (Throwable t) { Gdx.app.error("TactShoot", "softDot fail", t); }
+
+        try {
+            crosshairTex = new Texture(TexGen.crosshair(96, new Color(0.3f, 1f, 0.5f, 1f)));
+            crosshairTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        } catch (Throwable t) { Gdx.app.error("TactShoot", "crosshair fail", t); }
+
+        try {
+            hitmarkerTex = new Texture(TexGen.hitmarker(96, Palette.ACCENT));
+            hitmarkerTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        } catch (Throwable t) { Gdx.app.error("TactShoot", "hitmarker fail", t); }
+
+        try {
+            flashTex = new Texture(TexGen.flash(128));
+            flashTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        } catch (Throwable t) { Gdx.app.error("TactShoot", "flash fail", t); }
+
+        try {
+            FileHandle logoF = Gdx.files != null ? Gdx.files.internal("ui/logo.png") : null;
+            if (logoF != null && logoF.exists()) {
+                logo = new Texture(logoF);
+                logo.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+            }
+        } catch (Throwable t) { Gdx.app.error("TactShoot", "logo fail", t); }
     }
 
     private void loadFonts() {
@@ -90,68 +106,102 @@ public class Assets implements Disposable {
         if (orbitron.exists()) {
             fontTitle = genFont(orbitron, (int) (48 * uiScale), extra);
             fontBig = genFont(orbitron, (int) (30 * uiScale), extra);
-        } else {
-            fontTitle = null;
-            fontBig = null;
         }
         if (roboto.exists()) {
             font = genFont(roboto, (int) (23 * uiScale), extra);
             fontSmall = genFont(roboto, (int) (16 * uiScale), extra);
-        } else {
+        }
+        if (font == null) {
             font = new BitmapFont();
-            fontSmall = new BitmapFont();
             font.getData().setScale(uiScale);
+        }
+        if (fontSmall == null) {
+            fontSmall = new BitmapFont();
             fontSmall.getData().setScale(uiScale * 0.7f);
         }
     }
 
     private BitmapFont genFont(FileHandle f, int size, String extra) {
-        FreeTypeFontGenerator gen = new FreeTypeFontGenerator(f);
-        FreeTypeFontGenerator.FreeTypeFontParameter p = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        p.size = size;
-        p.characters = FreeTypeFontGenerator.DEFAULT_CHARS + extra;
-        p.minFilter = Texture.TextureFilter.Linear;
-        p.magFilter = Texture.TextureFilter.Linear;
-        BitmapFont font = gen.generateFont(p);
-        gen.dispose();
-        return font;
+        try {
+            FreeTypeFontGenerator gen = new FreeTypeFontGenerator(f);
+            FreeTypeFontGenerator.FreeTypeFontParameter p = new FreeTypeFontGenerator.FreeTypeFontParameter();
+            p.size = Math.max(8, size);
+            p.characters = FreeTypeFontGenerator.DEFAULT_CHARS + extra;
+            p.minFilter = Texture.TextureFilter.Linear;
+            p.magFilter = Texture.TextureFilter.Linear;
+            BitmapFont font = gen.generateFont(p);
+            gen.dispose();
+            return font;
+        } catch (Throwable t) {
+            Gdx.app.error("TactShoot", "FreeType font gen failed for " + f.path() + ": " + t.getMessage());
+            return null;
+        }
     }
 
     private void loadSounds() {
+        if (Gdx.audio == null) return;
         String[] names = {"shot_ar", "shot_smg", "shot_sg", "shot_pistol", "dry", "reload", "pump",
                 "hit", "kill", "damage", "explosion", "click", "pin", "step", "switch"};
-        byte[][] data = {
-                SoundSynth.gunshot(11, 0, 1f), SoundSynth.gunshot(21, 1, 1f), SoundSynth.gunshot(31, 2, 1f),
-                SoundSynth.gunshot(41, 3, 1f), SoundSynth.dryFire(51), SoundSynth.reload(61),
-                SoundSynth.pump(71), SoundSynth.hitmarker(81), SoundSynth.killConfirm(91),
-                SoundSynth.damage(101), SoundSynth.explosion(111), SoundSynth.click(121),
-                SoundSynth.pin(131), SoundSynth.step(141), SoundSynth.weaponSwitch(151)
-        };
         for (int i = 0; i < names.length; i++) {
-            FileHandle f = Gdx.files.local("tsnd/" + names[i] + ".wav");
-            if (!f.exists()) {
-                try {
-                    if (f.parent() != null) f.parent().mkdirs();
-                    f.writeBytes(data[i], false);
-                } catch (Exception e) {
-                    Gdx.app.error("TactShoot", "Failed to cache sound " + names[i] + ": " + e.getMessage());
-                }
-            }
             try {
-                snd[i] = Gdx.audio.newSound(f);
-            } catch (Exception e) {
+                byte[] data = generateSoundBytes(i);
+                if (data == null) continue;
+                FileHandle f = Gdx.files != null ? Gdx.files.local("tsnd/" + names[i] + ".wav") : null;
+                if (f != null && !f.exists()) {
+                    if (f.parent() != null) f.parent().mkdirs();
+                    f.writeBytes(data, false);
+                }
+                if (f != null && f.exists()) {
+                    snd[i] = Gdx.audio.newSound(f);
+                }
+            } catch (Throwable t) {
+                Gdx.app.error("TactShoot", "Failed loading sound " + names[i] + ": " + t.getMessage());
                 snd[i] = null;
             }
         }
     }
 
+    private byte[] generateSoundBytes(int idx) {
+        try {
+            switch (idx) {
+                case 0: return SoundSynth.gunshot(11, 0, 1f);
+                case 1: return SoundSynth.gunshot(21, 1, 1f);
+                case 2: return SoundSynth.gunshot(31, 2, 1f);
+                case 3: return SoundSynth.gunshot(41, 3, 1f);
+                case 4: return SoundSynth.dryFire(51);
+                case 5: return SoundSynth.reload(61);
+                case 6: return SoundSynth.pump(71);
+                case 7: return SoundSynth.hitmarker(81);
+                case 8: return SoundSynth.killConfirm(91);
+                case 9: return SoundSynth.damage(101);
+                case 10: return SoundSynth.explosion(111);
+                case 11: return SoundSynth.click(121);
+                case 12: return SoundSynth.pin(131);
+                case 13: return SoundSynth.step(141);
+                case 14: return SoundSynth.weaponSwitch(151);
+                default: return null;
+            }
+        } catch (Throwable t) {
+            Gdx.app.error("TactShoot", "SoundSynth fail idx " + idx + ": " + t.getMessage());
+            return null;
+        }
+    }
+
     private void loadShaders() {
-        skyShader = new ShaderProgram(SKY_VERT, SKY_FRAG);
-        postShader = new ShaderProgram(POST_VERT, POST_FRAG);
-        particleShader = new ShaderProgram(PARTICLE_VERT, PARTICLE_FRAG);
-        if (!skyShader.isCompiled()) log("sky", skyShader.getLog());
-        if (!postShader.isCompiled()) log("post", postShader.getLog());
-        if (!particleShader.isCompiled()) log("particle", particleShader.getLog());
+        try {
+            skyShader = new ShaderProgram(SKY_VERT, SKY_FRAG);
+            if (!skyShader.isCompiled()) log("sky", skyShader.getLog());
+        } catch (Throwable t) { Gdx.app.error("TactShoot", "sky shader error: " + t.getMessage()); }
+
+        try {
+            postShader = new ShaderProgram(POST_VERT, POST_FRAG);
+            if (!postShader.isCompiled()) log("post", postShader.getLog());
+        } catch (Throwable t) { Gdx.app.error("TactShoot", "post shader error: " + t.getMessage()); }
+
+        try {
+            particleShader = new ShaderProgram(PARTICLE_VERT, PARTICLE_FRAG);
+            if (!particleShader.isCompiled()) log("particle", particleShader.getLog());
+        } catch (Throwable t) { Gdx.app.error("TactShoot", "particle shader error: " + t.getMessage()); }
     }
 
     private void log(String name, String log) {

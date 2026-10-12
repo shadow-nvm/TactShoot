@@ -19,11 +19,16 @@ public class TactShootGame extends Game {
     @Override
     public void create() {
         Gdx.app.log("TactShoot", "booting v" + VERSION);
-        settings = new Settings();
-        settings.load();
-        assets = new Assets();
-        assets.load(settings);
-        setScreen(new MenuScreen(this));
+        try {
+            settings = new Settings();
+            settings.load();
+            assets = new Assets();
+            assets.load(settings);
+            setScreen(new MenuScreen(this));
+        } catch (Throwable t) {
+            Gdx.app.error("TactShoot", "Fatal boot error: " + t.getMessage(), t);
+            setScreen(new ErrorScreen(t.getMessage()));
+        }
     }
 
     @Override

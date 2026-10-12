@@ -18,7 +18,7 @@
         <activity
             android:name="com.tactshoot.game.android.AndroidLauncher"
             android:exported="true"
-            android:screenOrientation="landscape"
+            android:screenOrientation="sensorLandscape"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|uiMode|density|smallestScreenSize"
             android:theme="@style/GdxTheme">
             <intent-filter>

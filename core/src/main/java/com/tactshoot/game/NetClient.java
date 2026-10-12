@@ -99,6 +99,15 @@ public class NetClient {
                     });
                 }
             };
+            if (url.startsWith("wss://")) {
+                try {
+                    javax.net.ssl.SSLContext sslContext = javax.net.ssl.SSLContext.getInstance("TLS");
+                    sslContext.init(null, null, null);
+                    ws.setSocketFactory(sslContext.getSocketFactory());
+                } catch (Exception e) {
+                    Gdx.app.error("TactShoot", "SSL setup failed: " + e.getMessage());
+                }
+            }
             ws.setConnectionLostTimeout(25);
             ws.connect();
         } catch (Exception e) {

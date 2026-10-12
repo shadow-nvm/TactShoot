@@ -121,7 +121,9 @@ public class GameScreen extends ScreenAdapter implements
         sc.numSpotLights = 0;
         batch = new ModelBatch(new DefaultShaderProvider(sc));
 
-        cam = new PerspectiveCamera(settings.fov, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        int w = Gdx.graphics != null && Gdx.graphics.getWidth() > 0 ? Gdx.graphics.getWidth() : 1280;
+        int h = Gdx.graphics != null && Gdx.graphics.getHeight() > 0 ? Gdx.graphics.getHeight() : 720;
+        cam = new PerspectiveCamera(settings.fov, w, h);
         cam.near = 0.08f;
         cam.far = 220f;
 
@@ -194,10 +196,16 @@ public class GameScreen extends ScreenAdapter implements
             env.add(new DirectionalLight().set(map.sunColor, lightDir));
         }
         if (shadows && map != null) {
-            shadowLight = new DirectionalShadowLight(1024, 1024, 90f, 90f, 1f, 160f);
-            shadowLight.set(map.sunColor, lightDir);
-            env.add(shadowLight);
-            env.shadowMap = shadowLight;
+            try {
+                shadowLight = new DirectionalShadowLight(1024, 1024, 90f, 90f, 1f, 160f);
+                shadowLight.set(map.sunColor, lightDir);
+                env.add(shadowLight);
+                env.shadowMap = shadowLight;
+            } catch (Throwable t) {
+                Gdx.app.error("TactShoot", "ShadowLight init failed, disabling shadows: " + t.getMessage());
+                shadowLight = null;
+                env.shadowMap = null;
+            }
         } else {
             shadowLight = null;
             env.shadowMap = null;
