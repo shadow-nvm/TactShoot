@@ -25,119 +25,131 @@ public final class UiSkin {
         if (fontSmall == null) fontSmall = new BitmapFont();
         Skin skin = new Skin();
 
-        // ---------- drawables ----------
-        Pixmap panel = rounded(64, 64, 26, new Color(0.06f, 0.075f, 0.11f, 0.93f),
-                new Color(0.16f, 0.20f, 0.27f, 1f), 2);
-        Pixmap panelSolid = rounded(64, 64, 26, new Color(0.07f, 0.085f, 0.125f, 1f),
-                new Color(0.22f, 0.27f, 0.36f, 1f), 2);
+        try {
+            // ---------- drawables ----------
+            Pixmap panel = rounded(64, 64, 26, new Color(0.06f, 0.075f, 0.11f, 0.93f),
+                    new Color(0.16f, 0.20f, 0.27f, 1f), 2);
+            Pixmap panelSolid = rounded(64, 64, 26, new Color(0.07f, 0.085f, 0.125f, 1f),
+                    new Color(0.22f, 0.27f, 0.36f, 1f), 2);
 
-        Pixmap btnUp = rounded(64, 64, 22, new Color(0.13f, 0.16f, 0.22f, 1f),
-                new Color(0.30f, 0.37f, 0.48f, 1f), 2);
-        Pixmap btnOver = rounded(64, 64, 22, new Color(0.20f, 0.25f, 0.33f, 1f),
-                new Color(0.45f, 0.53f, 0.66f, 1f), 2);
-        Pixmap btnDown = rounded(64, 64, 22, new Color(0.08f, 0.10f, 0.14f, 1f),
-                new Color(0.22f, 0.27f, 0.36f, 1f), 2);
-        Pixmap btnAccentUp = rounded(64, 64, 22, new Color(0.85f, 0.47f, 0.08f, 1f),
-                new Color(1.0f, 0.70f, 0.25f, 1f), 2);
-        Pixmap btnAccentOver = rounded(64, 64, 22, new Color(1.0f, 0.55f, 0.10f, 1f),
-                new Color(1.0f, 0.82f, 0.40f, 1f), 2);
-        Pixmap btnAccentDown = rounded(64, 64, 22, new Color(0.62f, 0.33f, 0.05f, 1f),
-                new Color(0.85f, 0.47f, 0.08f, 1f), 2);
+            Pixmap btnUp = rounded(64, 64, 22, new Color(0.13f, 0.16f, 0.22f, 1f),
+                    new Color(0.30f, 0.37f, 0.48f, 1f), 2);
+            Pixmap btnOver = rounded(64, 64, 22, new Color(0.20f, 0.25f, 0.33f, 1f),
+                    new Color(0.45f, 0.53f, 0.66f, 1f), 2);
+            Pixmap btnDown = rounded(64, 64, 22, new Color(0.08f, 0.10f, 0.14f, 1f),
+                    new Color(0.22f, 0.27f, 0.36f, 1f), 2);
+            Pixmap btnAccentUp = rounded(64, 64, 22, new Color(0.85f, 0.47f, 0.08f, 1f),
+                    new Color(1.0f, 0.70f, 0.25f, 1f), 2);
+            Pixmap btnAccentOver = rounded(64, 64, 22, new Color(1.0f, 0.55f, 0.10f, 1f),
+                    new Color(1.0f, 0.82f, 0.40f, 1f), 2);
+            Pixmap btnAccentDown = rounded(64, 64, 22, new Color(0.62f, 0.33f, 0.05f, 1f),
+                    new Color(0.85f, 0.47f, 0.08f, 1f), 2);
 
-        Pixmap field = rounded(64, 64, 16, new Color(0.045f, 0.055f, 0.08f, 1f),
-                new Color(0.30f, 0.36f, 0.47f, 1f), 2);
+            Pixmap field = rounded(64, 64, 16, new Color(0.045f, 0.055f, 0.08f, 1f),
+                    new Color(0.30f, 0.36f, 0.47f, 1f), 2);
 
-        Pixmap sliderBg = rounded(64, 64, 16, new Color(0.06f, 0.07f, 0.10f, 1f),
-                new Color(0.25f, 0.30f, 0.40f, 1f), 2);
-        Pixmap sliderKnob = circle(48, 48, 24, new Color(0.9f, 0.95f, 1f, 1f),
-                new Color(0.4f, 0.46f, 0.58f, 1f));
+            Pixmap sliderBg = rounded(64, 64, 16, new Color(0.06f, 0.07f, 0.10f, 1f),
+                    new Color(0.25f, 0.30f, 0.40f, 1f), 2);
+            Pixmap sliderKnob = circle(48, 48, 24, new Color(0.9f, 0.95f, 1f, 1f),
+                    new Color(0.4f, 0.46f, 0.58f, 1f));
 
-        Pixmap checkOn = rounded(48, 48, 14, new Color(0.85f, 0.47f, 0.08f, 1f),
-                new Color(1.0f, 0.72f, 0.28f, 1f), 2);
-        Pixmap checkOff = rounded(48, 48, 14, new Color(0.09f, 0.11f, 0.16f, 1f),
-                new Color(0.30f, 0.36f, 0.47f, 1f), 2);
+            Pixmap checkOn = rounded(48, 48, 14, new Color(0.85f, 0.47f, 0.08f, 1f),
+                    new Color(1.0f, 0.72f, 0.28f, 1f), 2);
+            Pixmap checkOff = rounded(48, 48, 14, new Color(0.09f, 0.11f, 0.16f, 1f),
+                    new Color(0.30f, 0.36f, 0.47f, 1f), 2);
 
-        Drawable panelD = np(panel);
-        Drawable panelSolidD = np(panelSolid);
-        skin.add("panel", panelD);
-        skin.add("panelSolid", panelSolidD);
-        Drawable btnUpD = np(btnUp);
-        Drawable btnOverD = np(btnOver);
-        Drawable btnDownD = np(btnDown);
-        Drawable accentUpD = np(btnAccentUp);
-        Drawable accentOverD = np(btnAccentOver);
-        Drawable accentDownD = np(btnAccentDown);
-        Drawable fieldD = np(field);
-        Drawable sliderBgD = np(sliderBg);
-        Drawable knobD = new TextureRegionDrawable(new TextureRegion(new Texture(sliderKnob)));
-        Drawable checkOnD = new TextureRegionDrawable(new TextureRegion(new Texture(checkOn)));
-        Drawable checkOffD = new TextureRegionDrawable(new TextureRegion(new Texture(checkOff)));
+            Drawable panelD = np(panel);
+            Drawable panelSolidD = np(panelSolid);
+            skin.add("panel", panelD);
+            skin.add("panelSolid", panelSolidD);
+            Drawable btnUpD = np(btnUp);
+            Drawable btnOverD = np(btnOver);
+            Drawable btnDownD = np(btnDown);
+            Drawable accentUpD = np(btnAccentUp);
+            Drawable accentOverD = np(btnAccentOver);
+            Drawable accentDownD = np(btnAccentDown);
+            Drawable fieldD = np(field);
+            Drawable sliderBgD = np(sliderBg);
+            Drawable knobD = new TextureRegionDrawable(new TextureRegion(new Texture(sliderKnob)));
+            Drawable checkOnD = new TextureRegionDrawable(new TextureRegion(new Texture(checkOn)));
+            Drawable checkOffD = new TextureRegionDrawable(new TextureRegion(new Texture(checkOff)));
 
-        // ---------- styles ----------
-        TextButton.TextButtonStyle btn = new TextButton.TextButtonStyle();
-        btn.font = font;
-        btn.fontColor = Palette.TEXT;
-        btn.up = btnUpD;
-        btn.over = btnOverD;
-        btn.down = btnDownD;
-        skin.add("default", btn);
+            // ---------- styles ----------
+            TextButton.TextButtonStyle btn = new TextButton.TextButtonStyle();
+            btn.font = font;
+            btn.fontColor = Palette.TEXT;
+            btn.up = btnUpD;
+            btn.over = btnOverD;
+            btn.down = btnDownD;
+            skin.add("default", btn);
 
-        TextButton.TextButtonStyle btnAccent = new TextButton.TextButtonStyle();
-        btnAccent.font = font;
-        btnAccent.fontColor = Palette.WHITE;
-        btnAccent.up = accentUpD;
-        btnAccent.over = accentOverD;
-        btnAccent.down = accentDownD;
-        skin.add("accent", btnAccent);
+            TextButton.TextButtonStyle btnAccent = new TextButton.TextButtonStyle();
+            btnAccent.font = font;
+            btnAccent.fontColor = Palette.WHITE;
+            btnAccent.up = accentUpD;
+            btnAccent.over = accentOverD;
+            btnAccent.down = accentDownD;
+            skin.add("accent", btnAccent);
 
-        Label.LabelStyle label = new Label.LabelStyle();
-        label.font = font;
-        label.fontColor = Palette.TEXT;
-        skin.add("default", label);
+            Label.LabelStyle label = new Label.LabelStyle();
+            label.font = font;
+            label.fontColor = Palette.TEXT;
+            skin.add("default", label);
 
-        Label.LabelStyle labelDim = new Label.LabelStyle();
-        labelDim.font = font;
-        labelDim.fontColor = Palette.TEXT_DIM;
-        skin.add("dim", labelDim);
+            Label.LabelStyle labelDim = new Label.LabelStyle();
+            labelDim.font = font;
+            labelDim.fontColor = Palette.TEXT_DIM;
+            skin.add("dim", labelDim);
 
-        Label.LabelStyle labelSmall = new Label.LabelStyle();
-        labelSmall.font = fontSmall;
-        labelSmall.fontColor = Palette.TEXT_DIM;
-        skin.add("small", labelSmall);
+            Label.LabelStyle labelSmall = new Label.LabelStyle();
+            labelSmall.font = fontSmall;
+            labelSmall.fontColor = Palette.TEXT_DIM;
+            skin.add("small", labelSmall);
 
-        Label.LabelStyle labelAccent = new Label.LabelStyle();
-        labelAccent.font = font;
-        labelAccent.fontColor = Palette.ACCENT;
-        skin.add("accent", labelAccent);
+            Label.LabelStyle labelAccent = new Label.LabelStyle();
+            labelAccent.font = font;
+            labelAccent.fontColor = Palette.ACCENT;
+            skin.add("accent", labelAccent);
 
-        TextField.TextFieldStyle fieldStyle = new TextField.TextFieldStyle();
-        fieldStyle.font = font;
-        fieldStyle.fontColor = Palette.TEXT;
-        fieldStyle.background = fieldD;
-        fieldStyle.cursor = new TextureRegionDrawable(new TextureRegion(new Texture(
-                solid(2, 32, Palette.ACCENT))));
-        fieldStyle.selection = new TextureRegionDrawable(new TextureRegion(new Texture(
-                solid(2, 32, new Color(0.85f, 0.47f, 0.08f, 0.5f)))));
-        skin.add("default", fieldStyle);
+            TextField.TextFieldStyle fieldStyle = new TextField.TextFieldStyle();
+            fieldStyle.font = font;
+            fieldStyle.fontColor = Palette.TEXT;
+            fieldStyle.background = fieldD;
+            fieldStyle.cursor = new TextureRegionDrawable(new TextureRegion(new Texture(
+                    solid(2, 32, Palette.ACCENT))));
+            fieldStyle.selection = new TextureRegionDrawable(new TextureRegion(new Texture(
+                    solid(2, 32, new Color(0.85f, 0.47f, 0.08f, 0.5f)))));
+            skin.add("default", fieldStyle);
 
-        Slider.SliderStyle sliderStyle = new Slider.SliderStyle();
-        sliderStyle.background = sliderBgD;
-        sliderStyle.knob = knobD;
-        skin.add("default-horizontal", sliderStyle);
+            Slider.SliderStyle sliderStyle = new Slider.SliderStyle();
+            sliderStyle.background = sliderBgD;
+            sliderStyle.knob = knobD;
+            skin.add("default-horizontal", sliderStyle);
 
-        CheckBox.CheckBoxStyle cbStyle = new CheckBox.CheckBoxStyle();
-        cbStyle.font = font;
-        cbStyle.fontColor = Palette.TEXT;
-        cbStyle.checkboxOn = checkOnD;
-        cbStyle.checkboxOff = checkOffD;
-        skin.add("default", cbStyle);
+            CheckBox.CheckBoxStyle cbStyle = new CheckBox.CheckBoxStyle();
+            cbStyle.font = font;
+            cbStyle.fontColor = Palette.TEXT;
+            cbStyle.checkboxOn = checkOnD;
+            cbStyle.checkboxOff = checkOffD;
+            skin.add("default", cbStyle);
 
-        ScrollPane.ScrollPaneStyle spStyle = new ScrollPane.ScrollPaneStyle();
-        skin.add("default", spStyle);
+            ScrollPane.ScrollPaneStyle spStyle = new ScrollPane.ScrollPaneStyle();
+            skin.add("default", spStyle);
 
-        // dispose the raw pixmaps (drawables own textures now)
-        dispose(panel, panelSolid, btnUp, btnOver, btnDown, btnAccentUp, btnAccentOver,
-                btnAccentDown, field, sliderBg, sliderKnob, checkOn, checkOff);
+            dispose(panel, panelSolid, btnUp, btnOver, btnDown, btnAccentUp, btnAccentOver,
+                    btnAccentDown, field, sliderBg, sliderKnob, checkOn, checkOff);
+        } catch (Throwable t) {
+            // Absolute fallback so skin always has "panel" even if GL texture creation failed
+            try {
+                Pixmap p = new Pixmap(32, 32, Pixmap.Format.RGBA8888);
+                p.setColor(0.06f, 0.075f, 0.11f, 0.93f);
+                p.fill();
+                Texture tTex = new Texture(p);
+                p.dispose();
+                skin.add("panel", new TextureRegionDrawable(new TextureRegion(tTex)));
+                skin.add("panelSolid", new TextureRegionDrawable(new TextureRegion(tTex)));
+            } catch (Throwable ignored) {}
+        }
         return skin;
     }
 
