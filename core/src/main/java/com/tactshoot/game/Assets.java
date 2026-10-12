@@ -59,34 +59,34 @@ public class Assets implements Disposable {
         if (h <= 0) h = 720f;
         uiScale = MathUtils.clamp(h / 720f, 0.8f, 1.6f);
 
-        try { loadSprites(); } catch (Throwable t) { Gdx.app.error("TactShoot", "loadSprites fail", t); }
-        try { loadFonts(); } catch (Throwable t) { Gdx.app.error("TactShoot", "loadFonts fail", t); }
-        try { skin = UiSkin.build(font, fontSmall); } catch (Throwable t) { Gdx.app.error("TactShoot", "skin fail", t); }
-        try { loadSounds(); } catch (Throwable t) { Gdx.app.error("TactShoot", "loadSounds fail", t); }
-        try { loadShaders(); } catch (Throwable t) { Gdx.app.error("TactShoot", "loadShaders fail", t); }
-        try { loadTextures(); } catch (Throwable t) { Gdx.app.error("TactShoot", "loadTextures fail", t); }
-        try { loadModels(); } catch (Throwable t) { Gdx.app.error("TactShoot", "loadModels fail", t); }
-        try { loadMaps(); } catch (Throwable t) { Gdx.app.error("TactShoot", "loadMaps fail", t); }
+        loadSprites();
+        loadFonts();
+        skin = UiSkin.build(font, fontSmall);
+        loadSounds();
+        loadShaders();
+        loadTextures();
+        loadModels();
+        loadMaps();
     }
 
     private void loadSprites() {
         try {
-            dot = new Texture(TexGen.softDot(64, Color.WHITE, 1f));
+            dot = textureFromPixmap(TexGen.softDot(64, Color.WHITE, 1f));
             dot.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         } catch (Throwable t) { Gdx.app.error("TactShoot", "softDot fail", t); }
 
         try {
-            crosshairTex = new Texture(TexGen.crosshair(96, new Color(0.3f, 1f, 0.5f, 1f)));
+            crosshairTex = textureFromPixmap(TexGen.crosshair(96, new Color(0.3f, 1f, 0.5f, 1f)));
             crosshairTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         } catch (Throwable t) { Gdx.app.error("TactShoot", "crosshair fail", t); }
 
         try {
-            hitmarkerTex = new Texture(TexGen.hitmarker(96, Palette.ACCENT));
+            hitmarkerTex = textureFromPixmap(TexGen.hitmarker(96, Palette.ACCENT));
             hitmarkerTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         } catch (Throwable t) { Gdx.app.error("TactShoot", "hitmarker fail", t); }
 
         try {
-            flashTex = new Texture(TexGen.flash(128));
+            flashTex = textureFromPixmap(TexGen.flash(128));
             flashTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         } catch (Throwable t) { Gdx.app.error("TactShoot", "flash fail", t); }
 
@@ -122,19 +122,20 @@ public class Assets implements Disposable {
     }
 
     private BitmapFont genFont(FileHandle f, int size, String extra) {
+        FreeTypeFontGenerator gen = null;
         try {
-            FreeTypeFontGenerator gen = new FreeTypeFontGenerator(f);
+            gen = new FreeTypeFontGenerator(f);
             FreeTypeFontGenerator.FreeTypeFontParameter p = new FreeTypeFontGenerator.FreeTypeFontParameter();
             p.size = Math.max(8, size);
             p.characters = FreeTypeFontGenerator.DEFAULT_CHARS + extra;
             p.minFilter = Texture.TextureFilter.Linear;
             p.magFilter = Texture.TextureFilter.Linear;
-            BitmapFont font = gen.generateFont(p);
-            gen.dispose();
-            return font;
+            return gen.generateFont(p);
         } catch (Throwable t) {
             Gdx.app.error("TactShoot", "FreeType font gen failed for " + f.path() + ": " + t.getMessage());
             return null;
+        } finally {
+            if (gen != null) gen.dispose();
         }
     }
 
@@ -211,12 +212,12 @@ public class Assets implements Disposable {
     private void loadTextures() {
         String[] names = Maps.TEX_NAMES;
         for (int i = 0; i < names.length; i++) {
-            textures.put(names[i], loadTex(names[i], fallback(i)));
+            textures.put(names[i], loadTex(names[i], i));
         }
-        textures.put("metal2", loadTex("metal2", metal2Fallback()));
+        textures.put("metal2", loadTex("metal2", -1));
     }
 
-    private Texture loadTex(String name, Pixmap fallback) {
+    private Texture loadTex(String name, int fallbackIndex) {
         FileHandle f = Gdx.files.internal("textures/" + name + ".jpg");
         if (f.exists()) {
             try {
@@ -228,10 +229,23 @@ public class Assets implements Disposable {
                 Gdx.app.error("TactShoot", "texture load failed " + name, e);
             }
         }
-        Texture t = new Texture(fallback);
-        t.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-        t.setWrap(Texture.TextureWrap.Repeat, Texture.TextureWrap.Repeat);
-        return t;
+        Pixmap pixmap = fallbackIndex >= 0 ? fallback(fallbackIndex) : metal2Fallback();
+        try {
+            Texture t = new Texture(pixmap);
+            t.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+            t.setWrap(Texture.TextureWrap.Repeat, Texture.TextureWrap.Repeat);
+            return t;
+        } finally {
+            pixmap.dispose();
+        }
+    }
+
+    private Texture textureFromPixmap(Pixmap pixmap) {
+        try {
+            return new Texture(pixmap);
+        } finally {
+            if (pixmap != null) pixmap.dispose();
+        }
     }
 
     private Pixmap fallback(int i) {

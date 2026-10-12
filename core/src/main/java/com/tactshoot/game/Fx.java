@@ -299,6 +299,7 @@ public class Fx {
     }
 
     public void render(Camera cam, boolean additivePass) {
+        if (assets.particleShader == null || !assets.particleShader.isCompiled() || assets.dot == null) return;
         drawCount = 0;
         Vector3 cRight = tmp.set(cam.direction).crs(cam.up).nor();
         Vector3 cUp = tmp2.set(cRight).crs(cam.direction).nor();

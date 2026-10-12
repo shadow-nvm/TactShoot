@@ -41,7 +41,7 @@ set DEFAULT_JVM_OPTS=-Dfile.encoding=UTF-8 "-Xmx64m" "-Xms64m"
 @rem Find java.exe
 if exist "C:\Program Files\Android\Android Studio\jbr\bin\java.exe" (
     set "JAVA_HOME=C:\Program Files\Android\Android Studio\jbr"
-    set "JAVA_EXE=%JAVA_HOME%\bin\java.exe"
+    set "JAVA_EXE=C:\Program Files\Android\Android Studio\jbr\bin\java.exe"
     goto execute
 )
 if defined JAVA_HOME goto findJavaFromJavaHome

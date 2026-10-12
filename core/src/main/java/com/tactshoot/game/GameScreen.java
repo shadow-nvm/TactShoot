@@ -237,7 +237,9 @@ public class GameScreen extends ScreenAdapter implements
             bot.id = 1 + i;
             bot.primaryChoice = new int[]{Weapons.AR, Weapons.SMG, Weapons.SHOTGUN}[MathUtils.random(2)];
             bot.botLevel = MathUtils.clamp(cfg.botLevel + MathUtils.random(-0.08f, 0.08f), 0.1f, 1f);
-            bot.team = cfg.isTdm() ? (i % 2) : 100 + i;
+            // The player is on team 0, so the first bot must balance the
+            // opposing team before alternating teammates and opponents.
+            bot.team = cfg.isTdm() ? (i % 2 == 0 ? 1 : 0) : 100 + i;
             players.add(bot);
             byId.put(bot.id, bot);
         }

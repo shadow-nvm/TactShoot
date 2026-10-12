@@ -21,7 +21,7 @@ public class PracticeScreen extends ScreenAdapter {
     private final Assets assets;
 
     private Stage stage;
-    private String mode = "ffa";
+    private String mode = "tdm";
     private int mapIdx;
     private int weapon = Weapons.AR;
     private int botCount = 7;
@@ -54,7 +54,7 @@ public class PracticeScreen extends ScreenAdapter {
         // mode
         Table modeRow = new Table();
         tdmBtn = new TextButton("TEAM DEATHMATCH", assets.skin);
-        ffaBtn = new TextButton("FREE FOR ALL", assets.skin, "accent");
+        ffaBtn = new TextButton("FREE FOR ALL", assets.skin);
         tdmBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {

@@ -20,6 +20,7 @@ public class PostFx {
     }
 
     public void resize(int width, int height) {
+        if (width <= 0 || height <= 0) return;
         if (fbo != null) {
             try { fbo.dispose(); } catch (Exception ignored) {}
             fbo = null;
@@ -39,11 +40,11 @@ public class PostFx {
     }
 
     public void begin() {
-        if (fbo != null) fbo.begin();
+        if (canRender()) fbo.begin();
     }
 
     public void end() {
-        if (fbo == null) return;
+        if (!canRender()) return;
         fbo.end();
         Gdx.gl.glClearColor(0f, 0f, 0f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
@@ -56,6 +57,10 @@ public class PostFx {
         fbo.getColorBufferTexture().bind(0);
         quad.draw(assets.postShader);
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
+    }
+
+    private boolean canRender() {
+        return fbo != null && assets.postShader != null && assets.postShader.isCompiled();
     }
 
     public void setDamage(float d) {

@@ -15,6 +15,7 @@ public class Atmosphere {
     }
 
     public void render(PerspectiveCamera cam, MapDef map) {
+        if (assets.skyShader == null || !assets.skyShader.isCompiled()) return;
         Gdx.gl.glDisable(GL20.GL_DEPTH_TEST);
         Gdx.gl.glDisable(GL20.GL_CULL_FACE);
         Gdx.gl.glDepthMask(false);
