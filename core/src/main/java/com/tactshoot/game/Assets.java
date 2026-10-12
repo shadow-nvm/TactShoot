@@ -10,7 +10,6 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
-import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
@@ -272,21 +271,11 @@ public class Assets implements Disposable {
     }
 
     private void loadModels() {
-        ModelBuilder mb = new ModelBuilder();
-        mb.begin();
-        gunAR = ModelFactory.gunAssault(mb, textures);
-        mb = new ModelBuilder();
-        mb.begin();
-        gunSMG = ModelFactory.gunSmg(mb, textures);
-        mb = new ModelBuilder();
-        mb.begin();
-        gunSG = ModelFactory.gunShotgun(mb, textures);
-        mb = new ModelBuilder();
-        mb.begin();
-        gunPistol = ModelFactory.gunPistol(mb, textures);
-        mb = new ModelBuilder();
-        mb.begin();
-        soldierModel = ModelFactory.soldier(mb, textures);
+        gunAR = ModelFactory.gunAssault(textures);
+        gunSMG = ModelFactory.gunSmg(textures);
+        gunSG = ModelFactory.gunShotgun(textures);
+        gunPistol = ModelFactory.gunPistol(textures);
+        soldierModel = ModelFactory.soldier(textures);
     }
 
     private void loadMaps() {

@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.VertexAttribute;
 import com.badlogic.gdx.graphics.VertexAttributes;
 import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
+import com.badlogic.gdx.graphics.g3d.model.Node;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder;
 import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
@@ -535,58 +536,75 @@ public final class Maps {
 
     // ================================================================ props
 
+    private static int addPropPart(ModelBuilder modelBuilder, int index, Model primitive,
+                                  float x, float y, float z, float rx,
+                                  float sx, float sy, float sz) {
+        Node node = modelBuilder.node("propPart" + index, primitive);
+        node.translation.set(x, y, z);
+        node.scale.set(sx, sy, sz);
+        if (rx != 0f) node.rotation.set(Vector3.X, rx);
+        return index + 1;
+    }
+
     /** Small standalone prop models. */
     public static Model buildProp(String type, ObjectMap<String, Texture> textures) {
         Texture metal = textures.get("metal_dark");
         Texture metalL = textures.get("metal");
         Texture concrete = textures.get("concrete_dark");
-        ModelBuilder mb = new ModelBuilder();
-        mb.begin();
-        Model prim;
+        ModelBuilder modelBuilder = new ModelBuilder();
+        ModelBuilder primitiveBuilder = new ModelBuilder();
+        modelBuilder.begin();
+        int partIndex = 0;
         if (type.equals("barrel")) {
-            prim = mb.createCylinder(0.9f, 1.05f, 0.9f, 16,
-                    new Material(TextureAttribute.createDiffuse(metalL)), ATTRIBS);
-            mb.node().addChild(prim.nodes.first());
-            prim = mb.createCylinder(0.82f, 0.14f, 0.82f, 16,
-                    new Material(TextureAttribute.createDiffuse(metal)), ATTRIBS);
-            mb.node().addChild(prim.nodes.first());
-            prim = mb.createCylinder(0.9f, 0.14f, 0.9f, 16,
-                    new Material(TextureAttribute.createDiffuse(metal)), ATTRIBS);
-            mb.node().addChild(prim.nodes.first());
+            partIndex = addPropPart(modelBuilder, partIndex,
+                    primitiveBuilder.createCylinder(0.9f, 1.05f, 0.9f, 16,
+                            new Material(TextureAttribute.createDiffuse(metalL)), ATTRIBS),
+                    0, 0.525f, 0, 0, 1, 1, 1);
+            partIndex = addPropPart(modelBuilder, partIndex,
+                    primitiveBuilder.createCylinder(0.82f, 0.14f, 0.82f, 16,
+                            new Material(TextureAttribute.createDiffuse(metal)), ATTRIBS),
+                    0, 0.98f, 0, 0, 1, 1, 1);
+            addPropPart(modelBuilder, partIndex,
+                    primitiveBuilder.createCylinder(0.9f, 0.14f, 0.9f, 16,
+                            new Material(TextureAttribute.createDiffuse(metal)), ATTRIBS),
+                    0, 0.12f, 0, 0, 1, 1, 1);
         } else if (type.equals("lamp")) {
-            prim = mb.createCylinder(0.14f, 4.6f, 0.14f, 10,
-                    new Material(TextureAttribute.createDiffuse(metal)), ATTRIBS);
-            mb.node().addChild(prim.nodes.first());
-            prim = mb.createCylinder(0.1f, 1.1f, 0.1f, 8,
-                    new Material(TextureAttribute.createDiffuse(metal)), ATTRIBS);
-            prim.nodes.first().translation.set(0, 3.6f, 0.55f);
-            prim.nodes.first().rotation.set(1, 0, 0, 90);
-            mb.node().addChild(prim.nodes.first());
+            partIndex = addPropPart(modelBuilder, partIndex,
+                    primitiveBuilder.createCylinder(0.14f, 4.6f, 0.14f, 10,
+                            new Material(TextureAttribute.createDiffuse(metal)), ATTRIBS),
+                    0, 2.3f, 0, 0, 1, 1, 1);
+            addPropPart(modelBuilder, partIndex,
+                    primitiveBuilder.createCylinder(0.1f, 1.1f, 0.1f, 8,
+                            new Material(TextureAttribute.createDiffuse(metal)), ATTRIBS),
+                    0, 3.6f, 0.55f, 90, 1, 1, 1);
         } else if (type.equals("antenna")) {
             for (int i = 0; i < 3; i++) {
-                prim = mb.createCylinder(0.16f, 3.4f, 0.16f, 8,
-                        new Material(TextureAttribute.createDiffuse(metal)), ATTRIBS);
-                prim.nodes.first().translation.set(0, 1.2f + i * 3.4f, 0);
-                prim.nodes.first().scale.set(1f - i * 0.3f, 1f, 1f - i * 0.3f);
-                mb.node().addChild(prim.nodes.first());
+                float taper = 1f - i * 0.3f;
+                partIndex = addPropPart(modelBuilder, partIndex,
+                        primitiveBuilder.createCylinder(0.16f, 3.4f, 0.16f, 8,
+                                new Material(TextureAttribute.createDiffuse(metal)), ATTRIBS),
+                        0, 1.2f + i * 3.4f, 0, 0, taper, 1, taper);
             }
-            prim = mb.createBox(3.4f, 0.1f, 0.1f, new Material(TextureAttribute.createDiffuse(metal)), ATTRIBS);
-            prim.nodes.first().translation.set(0, 6.2f, 0);
-            mb.node().addChild(prim.nodes.first());
+            addPropPart(modelBuilder, partIndex,
+                    primitiveBuilder.createBox(3.4f, 0.1f, 0.1f,
+                            new Material(TextureAttribute.createDiffuse(metal)), ATTRIBS),
+                    0, 6.2f, 0, 0, 1, 1, 1);
         } else if (type.equals("tank")) {
-            prim = mb.createCylinder(2.6f, 3.2f, 2.6f, 24,
-                    new Material(TextureAttribute.createDiffuse(metal)), ATTRIBS);
-            mb.node().addChild(prim.nodes.first());
-            prim = mb.createCylinder(1.0f, 3.3f, 1.0f, 16,
-                    new Material(TextureAttribute.createDiffuse(concrete)), ATTRIBS);
-            mb.node().addChild(prim.nodes.first());
+            partIndex = addPropPart(modelBuilder, partIndex,
+                    primitiveBuilder.createCylinder(2.6f, 3.2f, 2.6f, 24,
+                            new Material(TextureAttribute.createDiffuse(metal)), ATTRIBS),
+                    0, 1.6f, 0, 0, 1, 1, 1);
+            addPropPart(modelBuilder, partIndex,
+                    primitiveBuilder.createCylinder(1.0f, 3.3f, 1.0f, 16,
+                            new Material(TextureAttribute.createDiffuse(concrete)), ATTRIBS),
+                    0, 3.2f, 0, 0, 1, 1, 1);
         } else { // pipe
-            prim = mb.createCylinder(0.5f, 7f, 0.5f, 12,
-                    new Material(TextureAttribute.createDiffuse(metal)), ATTRIBS);
-            prim.nodes.first().translation.set(0, 0, 0);
-            mb.node().addChild(prim.nodes.first());
+            addPropPart(modelBuilder, partIndex,
+                    primitiveBuilder.createCylinder(0.5f, 7f, 0.5f, 12,
+                            new Material(TextureAttribute.createDiffuse(metal)), ATTRIBS),
+                    0, 0, 0, 0, 1, 1, 1);
         }
-        return mb.end();
+        return modelBuilder.end();
     }
 
     public static Array<ModelInstance> buildProps(MapDef map, ObjectMap<String, Texture> textures) {
