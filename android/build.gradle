@@ -63,31 +63,24 @@ dependencies {
     natives "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-x86_64"
 }
 
-tasks.register('copyAndroidNatives') {
-    doFirst {
-        file("src/main/jniLibs").mkdirs()
-        configurations.natives.files.each { jar ->
-            def outputDir = null
-            if (jar.name.endsWith("natives-armeabi-v7a.jar")) outputDir = file("src/main/jniLibs/armeabi-v7a")
-            if (jar.name.endsWith("natives-arm64-v8a.jar")) outputDir = file("src/main/jniLibs/arm64-v8a")
-            if (jar.name.endsWith("natives-x86.jar")) outputDir = file("src/main/jniLibs/x86")
-            if (jar.name.endsWith("natives-x86_64.jar")) outputDir = file("src/main/jniLibs/x86_64")
-            if (outputDir != null) {
-                outputDir.mkdirs()
-                copy {
-                    from zipTree(jar)
-                    include "*.so"
-                    into outputDir
-                }
+// Extract natives at configuration/evaluation time so AGP sourceSets picks them up reliably
+file("src/main/jniLibs").mkdirs()
+try {
+    configurations.natives.files.each { jar ->
+        def outputDir = null
+        if (jar.name.endsWith("natives-armeabi-v7a.jar")) outputDir = file("src/main/jniLibs/armeabi-v7a")
+        if (jar.name.endsWith("natives-arm64-v8a.jar")) outputDir = file("src/main/jniLibs/arm64-v8a")
+        if (jar.name.endsWith("natives-x86.jar")) outputDir = file("src/main/jniLibs/x86")
+        if (jar.name.endsWith("natives-x86_64.jar")) outputDir = file("src/main/jniLibs/x86_64")
+        if (outputDir != null) {
+            outputDir.mkdirs()
+            copy {
+                from zipTree(jar)
+                include "*.so"
+                into outputDir
             }
         }
     }
+} catch (Throwable t) {
+    println "Natives extraction notice: " + t.message
 }
-
-tasks.whenTaskAdded { task ->
-    if (task.name.contains("merge") && task.name.contains("JniLibs")) {
-        task.dependsOn 'copyAndroidNatives'
-    }
-}
-
-preBuild.dependsOn 'copyAndroidNatives'
