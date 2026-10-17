@@ -65,7 +65,8 @@ public class Hud {
     private final Stage stage;
     private final GlyphLayout gl = new GlyphLayout();
 
-    private Label hpNum, ammoLabel, reserveLabel, weaponLabel, grenadeLabel, timerLabel, scoreLabel, pingLabel;    private Label bannerLabel, bannerSub;
+    private Label ammoLabel, reserveLabel, weaponLabel, grenadeLabel, timerLabel, scoreLabel, pingLabel, fpsLabel;
+    private Label bannerLabel, bannerSub;
     private Label toastLabel;
     private Label respawnLabel;
     private Label killConfirmLabel;
@@ -123,10 +124,12 @@ public class Hud {
         scoreLabel = new Label("0 - 0", assets.skin, "default");
         timerLabel = new Label("8:00", assets.skin, "default");
         pingLabel = new Label("", assets.skin, "small");
+        fpsLabel = new Label("", assets.skin, "small");
         Table topRow = new Table();
         topRow.add(scoreLabel).padRight(16);
         topRow.add(timerLabel).padRight(16);
-        topRow.add(pingLabel);
+        topRow.add(pingLabel).padRight(10);
+        topRow.add(fpsLabel);
         top.add(topRow).padTop(10 * us).row();
         bannerLabel = new Label("", assets.skin, "default");
         bannerSub = new Label("", assets.skin, "small");
@@ -144,7 +147,8 @@ public class Hud {
         // bottom-right: ammo
         Table ammoT = new Table();
         ammoT.setFillParent(true);
-        ammoT.bottom().right();
+        // Centred above the bottom edge so it never sits under the fire button.
+        ammoT.bottom();
         ammoLabel = new Label("30", assets.skin, "default");
         ammoLabel.setFontScale(1.6f);
         reserveLabel = new Label("/ 120", assets.skin, "dim");
@@ -157,7 +161,7 @@ public class Hud {
         ammoCol.add(weaponLabel).padRight(20 * us).padBottom(4).row();
         ammoCol.add(ammoRow).padRight(20 * us).row();
         ammoCol.add(grenadeLabel).padRight(20 * us).padTop(4).left();
-        ammoT.add(ammoCol).padRight(30 * us).padBottom(24 * us);
+        ammoT.add(ammoCol).padBottom(18 * us);
         stage.addActor(ammoT);
 
         // kill feed (top right)
@@ -179,12 +183,15 @@ public class Hud {
         chatField.setMessageText("Type a message, Enter to send...");
         chatField.setVisible(false);
         chatField.setTextFieldListener((field, c) -> {
-            String text = field.getText().trim();
-            if (!text.isEmpty()) {
-                listener.onSendChat(text);
+            // The listener fires per typed character, not per submission.
+            // Submit only on Enter, otherwise the first keystroke sends and
+            // clears the field.
+            if (c == '\n' || c == '\r') {
+                String text = field.getText().trim();
+                if (!text.isEmpty()) listener.onSendChat(text);
+                field.setText("");
+                hideChat();
             }
-            field.setText("");
-            hideChat();
         });
         Table chatInputT = new Table();
         chatInputT.setFillParent(true);
@@ -196,8 +203,8 @@ public class Hud {
         toastLabel = new Label("", assets.skin, "small");
         Table toastT = new Table();
         toastT.setFillParent(true);
-        toastT.bottom();
-        toastT.add(toastLabel).padBottom(64 * us);
+        toastT.top();
+        toastT.add(toastLabel).padTop(220 * us);
         stage.addActor(toastT);
 
         // respawn
@@ -331,7 +338,13 @@ public class Hud {
     // ---------------------------------------------------------------- setters
 
     public void setHp(float hp) {
-        if (hpNum != null) hpNum.setText(String.valueOf(Math.max(0, Math.round(hp))));
+        // Health is drawn directly in renderOverlay.
+    }
+
+    public void setFps(float fps) {
+        if (fpsLabel == null) return;
+        if (fps < 0f) fpsLabel.setText("");
+        else fpsLabel.setText((int) Math.round(fps) + " FPS");
     }
 
     public void setAmmo(int mag, int reserve, int grenades, String weaponName) {
@@ -617,117 +630,124 @@ public class Hud {
         float h = Gdx.graphics.getHeight();
         float us = assets.uiScale;
         PlayerEntity local = ctx.local();
+        if (local == null) return;
+
         sr.setProjectionMatrix(stage.getCamera().combined);
         batch.setProjectionMatrix(stage.getCamera().combined);
 
         Gdx.gl.glDisable(Gdx.gl20.GL_CULL_FACE);
+        Gdx.gl.glDisable(Gdx.gl20.GL_DEPTH_TEST);
         Gdx.gl.glEnable(Gdx.gl20.GL_BLEND);
         Gdx.gl.glBlendFunc(Gdx.gl20.GL_SRC_ALPHA, Gdx.gl20.GL_ONE_MINUS_SRC_ALPHA);
 
-        // ---------- radar ----------
         float cx = 96 * us, cy = h - 96 * us, R = 78 * us;
+        float ccx = w / 2f, ccy = h / 2f;
+
+        // ------------------------------------------------------------ shapes
         sr.begin(ShapeRenderer.ShapeType.Filled);
-        sr.setColor(0f, 0f, 0f, 0.5f);
+
+        // radar
+        sr.setColor(0f, 0f, 0f, 0.48f);
         sr.circle(cx, cy, R);
-        float scale = R / 32f;
+        float scale = R / 34f;
+        float cosY = MathUtils.cos(local.yaw);
+        float sinY = MathUtils.sin(local.yaw);
         for (PlayerEntity p : ctx.players()) {
             if (p == local || !p.alive) continue;
             float dx = p.pos.x - local.pos.x;
             float dz = p.pos.z - local.pos.z;
             float dist = (float) Math.sqrt(dx * dx + dz * dz);
-            if (dist > 32f) continue;
-            float cosY = MathUtils.cos(local.yaw);
-            float sinY = MathUtils.sin(local.yaw);
-            float rx = dx * cosY - dz * sinY;
-            float rz = dx * sinY + dz * cosY;
-            float sx = cx + rz * scale;
-            float sy = cy + rx * scale;
+            if (dist > 34f) continue;
+            float fwd = dx * cosY + dz * sinY;
+            float right = -dx * sinY + dz * cosY;
+            float sx = cx + right * scale;
+            float sy = cy + fwd * scale;
             boolean friendly = ctx.tdm() && p.team == local.team;
-            if (friendly) sr.setColor(Palette.TEAL);
-            else sr.setColor(1f, 0.25f, 0.2f, 1f);
-            sr.circle(sx, sy, 5 * us);
+            if (friendly) sr.setColor(Palette.TEAL.r, Palette.TEAL.g, Palette.TEAL.b, 0.95f);
+            else sr.setColor(1f, 0.28f, 0.22f, 0.95f);
+            sr.circle(sx, sy, 4.4f * us);
         }
-        // player arrow
-        sr.setColor(1f, 1f, 1f, 0.9f);
-        sr.triangle(cx, cy + R * 0.42f, cx - R * 0.16f, cy + R * 0.1f, cx + R * 0.16f, cy + R * 0.1f);
-        sr.setColor(0.05f, 0.07f, 0.1f, 0.7f);
-        sr.rect(cx - R * 0.16f, cy - R * 0.06f, R * 0.32f, R * 0.12f); // hide dot area
-        sr.setColor(1f, 1f, 1f, 0.9f);
-        sr.circle(cx, cy, 4 * us);
-        sr.end();
-        sr.begin(ShapeRenderer.ShapeType.Line);
-        sr.setColor(1f, 1f, 1f, 0.3f);
-        sr.circle(cx, cy, R);
-        sr.end();
+        // facing arrow
+        sr.setColor(1f, 1f, 1f, 0.92f);
+        sr.triangle(cx, cy + R * 0.34f, cx - R * 0.12f, cy + R * 0.08f,
+                cx + R * 0.12f, cy + R * 0.08f);
+        sr.circle(cx, cy, 3.2f * us);
 
-        // ---------- hp bar ----------
+        // health bar
         float hp = T.clamp(local.hp / 100f, 0f, 1f);
-        float bw = 260 * us, bh = 24 * us, bx = 20 * us, by = 22 * us;
-        sr.begin(ShapeRenderer.ShapeType.Filled);
+        float bw = 250 * us, bh = 20 * us, bxo = 20 * us, byo = 20 * us;
         sr.setColor(0f, 0f, 0f, 0.55f);
-        sr.rect(bx - 2, by - 2, bw + 4, bh + 4);
-        Color hpCol = hp > 0.5f ? Palette.GREEN
-                : hp > 0.25f ? Palette.ACCENT : Palette.RED;
+        sr.rect(bxo - 2, byo - 2, bw + 4, bh + 4);
+        Color hpCol = hp > 0.5f ? Palette.GREEN : hp > 0.25f ? Palette.ACCENT : Palette.RED;
         sr.setColor(hpCol.r, hpCol.g, hpCol.b, 0.95f);
-        sr.rect(bx, by, bw * hp, bh);
-        sr.end();
-        batch.begin();
-        assets.font.setColor(1f, 1f, 1f, 1f);
-        gl.setText(assets.font, String.valueOf(Math.max(0, Math.round(local.hp))));
-        assets.font.draw(batch, String.valueOf(Math.max(0, Math.round(local.hp))),
-                bx + bw / 2f - gl.width / 2f, by + bh / 2f + gl.height / 2f);
+        sr.rect(bxo, byo, bw * hp, bh);
 
-        // ---------- crosshair ----------
+        // crosshair
         if (localAlive && !localAiming) {
             float gap = T.clamp(7 * us + crosshairSpread, 8 * us, 52 * us);
             float len = 13 * us;
             float th = 3 * us;
-            float ccx = w / 2f, ccy = h / 2f;
-            sr.setProjectionMatrix(stage.getCamera().combined);
-            sr.begin(ShapeRenderer.ShapeType.Filled);
-            // dark outline pass
-            sr.setColor(0f, 0f, 0f, 0.6f);
+            sr.setColor(0f, 0f, 0f, 0.55f);
             for (int i = 0; i < 4; i++) {
-                crossRect(sr, i, gap - 1.5f * us, len + 3 * us, th + 3 * us, ccx, ccy);
+                crossRect(sr, i, gap - 1.5f, len + 3 * us, th + 3 * us, ccx, ccy);
             }
-            // bright pass
-            sr.setColor(0.4f, 1f, 0.6f, 0.95f);
-            for (int i = 0; i < 4; i++) {
-                crossRect(sr, i, gap, len, th, ccx, ccy);
-            }
-            sr.setColor(0.4f, 1f, 0.6f, 0.95f);
-            sr.circle(ccx, ccy, 2.4f * us);
-            sr.end();
-        }
-
-        // hitmarker
-        if (hitmarkerTimer > 0f) {
-            float a = hitmarkerTimer / 0.16f;
-            float size = 56 * us;
-            batch.setColor(hitHead ? Palette.RED : Color.WHITE);
-            batch.setColor(batch.getColor().r, batch.getColor().g, batch.getColor().b, a);
-            batch.draw(assets.hitmarkerTex, w / 2f - size / 2f, h / 2f - size / 2f, size, size);
-            batch.setColor(Color.WHITE);
+            sr.setColor(0.45f, 1f, 0.62f, 0.95f);
+            for (int i = 0; i < 4; i++) crossRect(sr, i, gap, len, th, ccx, ccy);
+            sr.circle(ccx, ccy, 2.2f * us);
+        } else if (localAlive) {
+            sr.setColor(1f, 0.23f, 0.18f, 0.95f);
+            sr.circle(ccx, ccy, 1.9f * us);
         }
 
         // damage direction arc
         if (damageTimer > 0f && localAlive) {
             float a = damageTimer / 0.8f;
-            float ang = -damageDir + local.yaw + MathUtils.PI / 2f;
-            float rr = Math.min(w, h) * 0.36f;
-            float arcCx = w / 2f, arcCy = h / 2f;
-            sr.begin(ShapeRenderer.ShapeType.Filled);
-            sr.setColor(0.9f, 0.1f, 0.05f, a * 0.75f);
+            float rel = T.wrapAngle(damageDir - local.yaw);
+            float ang = MathUtils.PI / 2f - rel;
+            float rr = Math.min(w, h) * 0.33f;
+            sr.setColor(0.95f, 0.12f, 0.06f, a * 0.72f);
             for (int i = -3; i <= 3; i++) {
-                float aa = ang + i * MathUtils.PI / 24f;
-                sr.rect(arcCx + MathUtils.cos(aa) * rr - 5 * us,
-                        arcCy + MathUtils.sin(aa) * rr - 5 * us,
-                        10 * us, 10 * us);
+                float aa = ang + i * MathUtils.PI / 28f;
+                sr.circle(ccx + MathUtils.cos(aa) * rr, ccy + MathUtils.sin(aa) * rr, 5.5f * us);
             }
-            sr.end();
+        }
+        sr.end();
+
+        sr.begin(ShapeRenderer.ShapeType.Line);
+        sr.setColor(1f, 1f, 1f, 0.30f);
+        sr.circle(cx, cy, R);
+        sr.setColor(1f, 1f, 1f, 0.12f);
+        sr.circle(cx, cy, R * 0.5f);
+        sr.end();
+
+        // ------------------------------------------------------------ text
+        batch.begin();
+        assets.font.setColor(1f, 1f, 1f, 1f);
+        String hpText = String.valueOf(Math.max(0, Math.round(local.hp)));
+        gl.setText(assets.font, hpText);
+        assets.font.draw(batch, hpText, bxo + bw * 0.5f - gl.width * 0.5f,
+                byo + bh * 0.5f + gl.height * 0.5f);
+
+        if (hitmarkerTimer > 0f) {
+            float a = hitmarkerTimer / 0.16f;
+            float size = 56 * us;
+            Color hc = hitHead ? Palette.RED : Palette.WHITE;
+            batch.setColor(hc.r, hc.g, hc.b, a);
+            if (assets.hitmarkerTex != null) {
+                batch.draw(assets.hitmarkerTex, ccx - size * 0.5f, ccy - size * 0.5f, size, size);
+            }
+            batch.setColor(Color.WHITE);
         }
 
+        if (localAlive && local.ammo() <= 0 && local.reserveAmmo() > 0) {
+            assets.fontSmall.setColor(Palette.ACCENT);
+            gl.setText(assets.fontSmall, "RELOAD  [R]");
+            assets.fontSmall.draw(batch, "RELOAD  [R]", ccx - gl.width * 0.5f, ccy - 58 * us);
+            assets.fontSmall.setColor(Color.WHITE);
+        }
         batch.end();
+
+        Gdx.gl.glEnable(Gdx.gl20.GL_DEPTH_TEST);
     }
 
     public void draw(SpriteBatch batch) {

@@ -37,6 +37,16 @@ gradlew.bat :desktop:run
 
 WASD move, mouse look, LMB fire, RMB aim, R reload, Q switch, G grenade, C crouch, T chat, TAB scoreboard, ESC pause.
 
+### 2b. Automated checks (optional)
+
+```
+gradlew.bat :core:physicsCheck          # headless movement/collision regression tests
+gradlew.bat :desktop:smokeRender        # boots a bot match and writes screenshots to build/smoke
+```
+
+`smokeRender` accepts `TACTSHOOT_QUALITY=0|1|2` (graphics preset) and `TACTSHOOT_MODE=game|gun`
+(full match or weapon-viewmodel only) so every quality tier can be verified from a terminal.
+
 ### 3. Run the multiplayer server
 
 ```

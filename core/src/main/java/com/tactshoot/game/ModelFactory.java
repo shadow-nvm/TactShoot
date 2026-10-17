@@ -136,6 +136,19 @@ public final class ModelFactory {
         return parts.finish();
     }
 
+    // ================================================================ grenade
+
+    /** Small frag grenade thrown by the player. Origin at its centre. */
+    public static Model grenade(ObjectMap<String, Texture> tex) {
+        Assembly parts = new Assembly();
+        Material metal = mat(tex, "metal_dark");
+        Material accent = colorMat(Palette.ACCENT);
+        parts.cylinder(metal, 0.10f, 0.16f, 0.10f, 12, 0, 0f, 0, 0);
+        parts.cylinder(accent, 0.045f, 0.045f, 0.045f, 10, 0, 0.08f, 0, 0);
+        parts.box(metal, 0.02f, 0.035f, 0.035f, 0.045f, 0.10f, 0, 0);
+        return parts.finish();
+    }
+
     // ================================================================ soldier
 
     /** Builds a soldier model. Team-tintable material indices: TORSO_IDX and HELMET_IDX. */

@@ -401,26 +401,36 @@ public class Assets implements Disposable {
             "#ifdef GL_ES\nprecision mediump float;\n#endif\n" +
             "varying vec2 v_uv;\n" +
             "uniform sampler2D u_tex;\n" +
+            "uniform vec2 u_texel;\n" +
             "uniform float u_damage, u_lowHp, u_time;\n" +
+            "float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }\n" +
             "void main() {\n" +
             "  vec2 uv = v_uv;\n" +
-            "  vec2 c = uv - 0.5;\n" +
-            "  float d2 = dot(c, c);\n" +
-            "  float aber = 0.0035 + d2 * 0.014;\n" +
-            "  vec3 col;\n" +
-            "  col.r = texture2D(u_tex, uv + c * aber).r;\n" +
-            "  col.g = texture2D(u_tex, uv).g;\n" +
-            "  col.b = texture2D(u_tex, uv - c * aber).b;\n" +
-            "  col *= 1.0 - d2 * 0.85;\n" +
-            "  float l = dot(col, vec3(0.299, 0.587, 0.114));\n" +
+            "  vec3 c = texture2D(u_tex, uv).rgb;\n" +
+            "  vec3 n = texture2D(u_tex, uv + vec2(0.0, u_texel.y)).rgb;\n" +
+            "  vec3 s = texture2D(u_tex, uv - vec2(0.0, u_texel.y)).rgb;\n" +
+            "  vec3 e = texture2D(u_tex, uv + vec2(u_texel.x, 0.0)).rgb;\n" +
+            "  vec3 w = texture2D(u_tex, uv - vec2(u_texel.x, 0.0)).rgb;\n" +
+            "  float lc = luma(c);\n" +
+            "  float edgeLuma = max(max(abs(luma(n) - lc), abs(luma(s) - lc)),\n" +
+            "                       max(abs(luma(e) - lc), abs(luma(w) - lc)));\n" +
+            "  vec3 blur = (n + s + e + w + c * 4.0) / 8.0;\n" +
+            "  vec3 col = mix(c, blur, smoothstep(0.06, 0.30, edgeLuma));\n" +
+            "  vec2 q = uv - 0.5;\n" +
+            "  float d2 = dot(q, q);\n" +
+            "  float aber = 0.0015 + d2 * 0.006;\n" +
+            "  col.r = mix(col.r, texture2D(u_tex, uv + q * aber).r, 0.7);\n" +
+            "  col.b = mix(col.b, texture2D(u_tex, uv - q * aber).b, 0.7);\n" +
+            "  col *= 1.0 - d2 * 0.72;\n" +
+            "  float l = luma(col);\n" +
             "  col = mix(vec3(l), col, 1.10);\n" +
-            "  col = (col - 0.5) * 1.07 + 0.5;\n" +
+            "  col = (col - 0.5) * 1.08 + 0.5;\n" +
             "  float edge = smoothstep(0.0, 0.5, d2 * 2.0);\n" +
-            "  col += vec3(0.50, 0.06, 0.04) * (1.0 - edge) * u_damage;\n" +
-            "  col += vec3(0.30, 0.02, 0.01) * (1.0 - edge) * u_lowHp * (0.5 + 0.5 * sin(u_time * 0.006));\n" +
+            "  col += vec3(0.55, 0.05, 0.03) * (1.0 - edge) * u_damage;\n" +
+            "  col += vec3(0.35, 0.02, 0.01) * (1.0 - edge) * u_lowHp * (0.5 + 0.5 * sin(u_time * 0.006));\n" +
             "  float g = fract(sin(dot(uv * vec2(12.9898, 78.233) + u_time * 0.0001, vec2(4.1414, 2.351))) * 43758.5453);\n" +
-            "  col += (g - 0.5) * 0.045;\n" +
-            "  gl_FragColor = vec4(col, 1.0);\n" +
+            "  col += (g - 0.5) * 0.028;\n" +
+            "  gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);\n" +
             "}\n";
 
     static final String PARTICLE_VERT =

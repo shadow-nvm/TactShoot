@@ -75,7 +75,7 @@ public final class Weapons {
             new Spec("SMG", 40, 160, 19f, 1.9f, 32f, 0.40f, 15.0f, true, false, 1,
                     0.016f, 0.075f, 0.0045f, 3.6f, 0.35f, 1.5f, 2.4f,
                     0.012f, 0.008f, 1.9f, 58f, 0.98f, 0.08f, 1),
-            new Spec("SHOTGUN", 8, 32, 9.5f, 1.6f, 18f, 0.20f, 1.15f, true, true, 9,
+            new Spec("SHOTGUN", 8, 32, 9.5f, 1.6f, 18f, 0.20f, 1.15f, false, true, 9,
                     0.050f, 0.16f, 0.045f, 5.0f, 0.5f, 1.25f, 1.9f,
                     0.045f, 0.012f, 0.55f, 60f, 0.90f, 0.16f, 2),
             new Spec("PISTOL", 12, 60, 34f, 2.0f, 35f, 0.40f, 5.5f, false, false, 1,

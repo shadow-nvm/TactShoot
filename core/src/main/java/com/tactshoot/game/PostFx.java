@@ -14,6 +14,7 @@ public class PostFx {
     private int w, h;
     private float damage = 0f;
     private float lowHp = 0f;
+    private boolean active;
 
     public PostFx(Assets assets) {
         this.assets = assets;
@@ -25,14 +26,17 @@ public class PostFx {
             try { fbo.dispose(); } catch (Exception ignored) {}
             fbo = null;
         }
+        // A depth-less fallback would render the world without depth testing
+        // (the "high settings looks broken" symptom), so fail the pass instead
+        // and let the scene draw straight to the screen.
         try {
             fbo = new FrameBuffer(Pixmap.Format.RGBA8888, width, height, true);
-        } catch (Exception e1) {
+        } catch (Throwable e1) {
             try {
-                // Fallback without depth buffer if hardware attachment failed
-                fbo = new FrameBuffer(Pixmap.Format.RGBA8888, width, height, false);
-            } catch (Exception e2) {
-                Gdx.app.error("TactShoot", "FrameBuffer creation failed: " + e2.getMessage());
+                fbo = new FrameBuffer(Pixmap.Format.RGB888, width, height, true);
+            } catch (Throwable e2) {
+                Gdx.app.error("TactShoot", "Post FX disabled (no depth-capable FBO): " + e2.getMessage());
+                fbo = null;
             }
         }
         w = width;
@@ -40,12 +44,25 @@ public class PostFx {
     }
 
     public void begin() {
-        if (canRender()) fbo.begin();
+        active = false;
+        if (!canRender()) return;
+        try {
+            fbo.begin();
+            active = true;
+        } catch (Throwable t) {
+            Gdx.app.error("TactShoot", "Post FX begin failed: " + t.getMessage());
+        }
     }
 
     public void end() {
-        if (!canRender()) return;
-        fbo.end();
+        if (!canRender() || !active) return;
+        active = false;
+        try {
+            fbo.end();
+        } catch (Throwable t) {
+            Gdx.app.error("TactShoot", "Post FX end failed: " + t.getMessage());
+            return;
+        }
         Gdx.gl.glClearColor(0f, 0f, 0f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
         Gdx.gl.glDisable(GL20.GL_DEPTH_TEST);
@@ -54,13 +71,15 @@ public class PostFx {
         assets.postShader.setUniformf("u_damage", damage);
         assets.postShader.setUniformf("u_lowHp", lowHp);
         assets.postShader.setUniformf("u_time", (float) (System.currentTimeMillis() % 1000000L));
+        assets.postShader.setUniformf("u_texel", 1f / Math.max(1, w), 1f / Math.max(1, h));
         fbo.getColorBufferTexture().bind(0);
         quad.draw(assets.postShader);
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST);
     }
 
     private boolean canRender() {
-        return fbo != null && assets.postShader != null && assets.postShader.isCompiled();
+        return fbo != null && w > 0 && h > 0
+                && assets.postShader != null && assets.postShader.isCompiled();
     }
 
     public void setDamage(float d) {

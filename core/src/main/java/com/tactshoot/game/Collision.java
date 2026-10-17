@@ -3,10 +3,19 @@ package com.tactshoot.game;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 
-/** Raycasting and capsule-vs-world physics against axis-aligned boxes. */
+/**
+ * Raycasting and capsule-vs-world physics against axis-aligned boxes.
+ *
+ * <p>The old solver pushed the player out of the <em>last</em> overlapping box
+ * and re-used the whole-body overlap test for every axis, so tall stacks
+ * teleported the player downward and walking along a wall could jitter. This
+ * solver sweeps horizontally per axis, supports real stair stepping, picks the
+ * highest support when landing and handles ceilings.</p>
+ */
 public final class Collision {
 
-    public static final float STEP_UP = 0.45f;
+    public static final float STEP_UP = 0.42f;
+    private static final float EPS = 0.0015f;
 
     public static class Hit {
         public boolean hit;
@@ -134,123 +143,206 @@ public final class Collision {
         return boxesOverlap(eb, b);
     }
 
-    /**
-     * Integrate entity movement against the world with axis-separated resolution
-     * and automatic step-up for stairs/low obstacles.
-     */
-    public static void moveEntity(PlayerEntity e, float dt, Array<Box> boxes) {
-        float r = NetConfig.PLAYER_RADIUS;
-
-        // ---- horizontal ----
-        float dx = e.vel.x * dt;
-        float dz = e.vel.z * dt;
-        if (dx != 0f || dz != 0f) {
-            // X axis
-            e.pos.x += dx;
-            boolean hitX = false;
-            for (int i = 0; i < boxes.size; i++) {
-                Box b = boxes.get(i);
-                if (entityOverlaps(e, b)) {
-                    hitX = true;
-                    break;
-                }
-            }
-            if (hitX) {
-                e.pos.x -= dx; // back off
-                if (e.onGround && tryStep(e, dx, 0f, boxes)) {
-                    // stepped up
-                } else {
-                    for (int i = 0; i < boxes.size; i++) {
-                        Box b = boxes.get(i);
-                        if (entityOverlaps(e, b)) {
-                            if (dx > 0) e.pos.x = b.minX - r - 0.001f;
-                            else e.pos.x = b.maxX + r + 0.001f;
-                        }
-                    }
-                    e.vel.x = 0f;
-                }
-            }
-            // Z axis
-            e.pos.z += dz;
-            boolean hitZ = false;
-            for (int i = 0; i < boxes.size; i++) {
-                Box b = boxes.get(i);
-                if (entityOverlaps(e, b)) {
-                    hitZ = true;
-                    break;
-                }
-            }
-            if (hitZ) {
-                e.pos.z -= dz;
-                if (e.onGround && tryStep(e, 0f, dz, boxes)) {
-                    // stepped up
-                } else {
-                    for (int i = 0; i < boxes.size; i++) {
-                        Box b = boxes.get(i);
-                        if (entityOverlaps(e, b)) {
-                            if (dz > 0) e.pos.z = b.minZ - r - 0.001f;
-                            else e.pos.z = b.maxZ + r + 0.001f;
-                        }
-                    }
-                    e.vel.z = 0f;
-                }
-            }
-        }
-
-        // ---- vertical ----
-        e.pos.y += e.vel.y * dt;
-        boolean grounded = false;
+    private static boolean overlapsAt(float x, float y, float z, float radius, float height,
+                                      Array<Box> boxes) {
+        float minX = x - radius, maxX = x + radius;
+        float minY = y, maxY = y + height;
+        float minZ = z - radius, maxZ = z + radius;
         for (int i = 0; i < boxes.size; i++) {
             Box b = boxes.get(i);
-            if (entityOverlaps(e, b)) {
-                if (e.vel.y <= 0f) {
-                    e.pos.y = b.maxY;
-                    e.vel.y = 0f;
-                    grounded = true;
-                } else {
-                    e.pos.y = b.minY - e.height();
-                    e.vel.y = 0f;
-                }
+            if (minX < b.maxX && maxX > b.minX
+                    && minY < b.maxY && maxY > b.minY
+                    && minZ < b.maxZ && maxZ > b.minZ) {
+                return true;
             }
         }
-        if (e.pos.y < 0f) { // safety floor
-            e.pos.y = 0f;
-            e.vel.y = 0f;
-            grounded = true;
-        }
-        e.onGround = grounded;
+        return false;
     }
 
-    /** Attempt to lift the entity by STEP_UP to clear a low obstacle. */
-    private static boolean tryStep(PlayerEntity e, float dx, float dz, Array<Box> boxes) {
-        e.pos.y += STEP_UP;
-        e.pos.x += dx;
-        e.pos.z += dz;
-        boolean ok = true;
+    /** True when the entity's feet are horizontally over the box. */
+    private static boolean overBoxXZ(PlayerEntity e, Box b) {
+        float r = NetConfig.PLAYER_RADIUS;
+        return e.pos.x + r > b.minX && e.pos.x - r < b.maxX
+                && e.pos.z + r > b.minZ && e.pos.z - r < b.maxZ;
+    }
+
+    /**
+     * Integrates one frame of movement with sub-stepping so fast movement
+     * cannot tunnel through thin cover.
+     */
+    public static void moveEntity(PlayerEntity e, float dt, Array<Box> boxes) {
+        float speed = (float) Math.sqrt(e.vel.x * e.vel.x + e.vel.z * e.vel.z)
+                + Math.abs(e.vel.y) * 0.5f;
+        int substeps = T.clamp((int) Math.ceil(speed * dt / 0.22f), 1, 4);
+        float sdt = dt / substeps;
+        for (int i = 0; i < substeps; i++) {
+            if (e.vel.x != 0f) moveAxisX(e, e.vel.x * sdt, boxes);
+            if (e.vel.z != 0f) moveAxisZ(e, e.vel.z * sdt, boxes);
+            moveAxisY(e, e.vel.y * sdt, boxes);
+        }
+    }
+
+    private static void moveAxisX(PlayerEntity e, float dx, Array<Box> boxes) {
+        float r = NetConfig.PLAYER_RADIUS;
+        float nx = e.pos.x + dx;
+        if (!overlapsAt(nx, e.pos.y, e.pos.z, r, e.height(), boxes)) {
+            e.pos.x = nx;
+            return;
+        }
+        if (e.onGround && tryStep(e, nx, e.pos.z, boxes)) {
+            e.pos.x = nx;
+            return;
+        }
+        float clamped = nx;
         for (int i = 0; i < boxes.size; i++) {
-            if (entityOverlaps(e, boxes.get(i))) {
-                ok = false;
-                break;
+            Box b = boxes.get(i);
+            // Only boxes the swept capsule actually overlaps resolve this axis.
+            if (nx + r <= b.minX || nx - r >= b.maxX) continue;
+            if (e.pos.z + r <= b.minZ || e.pos.z - r >= b.maxZ) continue;
+            if (e.pos.y + e.height() <= b.minY || e.pos.y >= b.maxY) continue;
+            if (dx > 0f) clamped = Math.min(clamped, b.minX - r - EPS);
+            else clamped = Math.max(clamped, b.maxX + r + EPS);
+        }
+        e.pos.x = clamped;
+        e.vel.x = 0f;
+    }
+
+    private static void moveAxisZ(PlayerEntity e, float dz, Array<Box> boxes) {
+        float r = NetConfig.PLAYER_RADIUS;
+        float nz = e.pos.z + dz;
+        if (!overlapsAt(e.pos.x, e.pos.y, nz, r, e.height(), boxes)) {
+            e.pos.z = nz;
+            return;
+        }
+        if (e.onGround && tryStep(e, e.pos.x, nz, boxes)) {
+            e.pos.z = nz;
+            return;
+        }
+        float clamped = nz;
+        for (int i = 0; i < boxes.size; i++) {
+            Box b = boxes.get(i);
+            if (e.pos.x + r <= b.minX || e.pos.x - r >= b.maxX) continue;
+            if (nz + r <= b.minZ || nz - r >= b.maxZ) continue;
+            if (e.pos.y + e.height() <= b.minY || e.pos.y >= b.maxY) continue;
+            if (dz > 0f) clamped = Math.min(clamped, b.minZ - r - EPS);
+            else clamped = Math.max(clamped, b.maxZ + r + EPS);
+        }
+        e.pos.z = clamped;
+        e.vel.z = 0f;
+    }
+
+    /**
+     * Attempts to climb a step no taller than {@link #STEP_UP}. The entity is
+     * raised onto the highest blocking top found between the current and target
+     * position, then checked for headroom.
+     */
+    private static boolean tryStep(PlayerEntity e, float targetX, float targetZ, Array<Box> boxes) {
+        float r = NetConfig.PLAYER_RADIUS;
+        float stepTop = -Float.MAX_VALUE;
+        for (int i = 0; i < boxes.size; i++) {
+            Box b = boxes.get(i);
+            boolean overTarget = targetX + r > b.minX && targetX - r < b.maxX
+                    && targetZ + r > b.minZ && targetZ - r < b.maxZ;
+            if (!overTarget) continue;
+            if (b.maxY <= e.pos.y + EPS || b.maxY > e.pos.y + STEP_UP + 0.05f) continue;
+            stepTop = Math.max(stepTop, b.maxY);
+        }
+        if (stepTop == -Float.MAX_VALUE) return false;
+        float targetY = stepTop + EPS;
+        if (overlapsAt(targetX, targetY, targetZ, r, e.height(), boxes)) return false;
+        e.pos.y = targetY;
+        return true;
+    }
+
+    private static void moveAxisY(PlayerEntity e, float dy, Array<Box> boxes) {
+        float oldY = e.pos.y;
+        float ny = oldY + dy;
+        float r = NetConfig.PLAYER_RADIUS;
+        float h = e.height();
+
+        if (!overlapsAt(e.pos.x, ny, e.pos.z, r, h, boxes)) {
+            e.pos.y = ny;
+            e.onGround = false;
+            // Safety floor so a missing ground mesh can never drop the player forever.
+            if (e.pos.y <= 0f) {
+                e.pos.y = 0f;
+                e.vel.y = 0f;
+                e.onGround = true;
             }
+            return;
         }
-        if (!ok) {
-            e.pos.x -= dx;
-            e.pos.z -= dz;
-            e.pos.y -= STEP_UP;
+
+        if (dy <= 0f) {
+            // Land on the highest support we could have crossed from above.
+            float bestTop = 0f;
+            for (int i = 0; i < boxes.size; i++) {
+                Box b = boxes.get(i);
+                if (!overBoxXZ(e, b)) continue;
+                if (b.maxY <= oldY + 0.02f && b.maxY > bestTop) bestTop = b.maxY;
+            }
+            e.pos.y = bestTop;
+            e.vel.y = 0f;
+            e.onGround = true;
+        } else {
+            // Head bump: stop under the lowest ceiling. Only boxes that lie
+            // above the head count -- otherwise the ground box (minY < 0)
+            // would be chosen and teleport the player downward.
+            float lowest = Float.MAX_VALUE;
+            for (int i = 0; i < boxes.size; i++) {
+                Box b = boxes.get(i);
+                if (!overBoxXZ(e, b)) continue;
+                if (b.minY < oldY + h - 0.20f) continue;
+                if (b.minY < lowest) lowest = b.minY;
+            }
+            if (lowest != Float.MAX_VALUE) {
+                e.pos.y = lowest - h - EPS;
+                e.vel.y = 0f;
+            } else {
+                e.pos.y = ny;
+            }
+            e.onGround = false;
         }
-        return ok;
     }
 
     /** True if the entity can stand at its current position with the given height. */
     public static boolean canStand(PlayerEntity e, float height, Array<Box> boxes) {
-        float prev = e.height();
-        // temporarily test with target height
-        Box eb = new Box();
         float r = NetConfig.PLAYER_RADIUS;
+        Box eb = new Box();
         eb.set(e.pos.x - r, e.pos.y, e.pos.z - r, e.pos.x + r, e.pos.y + height, e.pos.z + r, 0);
         for (int i = 0; i < boxes.size; i++) {
             if (boxesOverlap(eb, boxes.get(i))) return false;
         }
         return true;
+    }
+
+    /**
+     * Gently pushes overlapping combatants apart on the horizontal plane.
+     * Bodies are treated as circles so players cannot occupy the same cell.
+     */
+    public static void separatePlayers(Array<PlayerEntity> players) {
+        float minDist = NetConfig.PLAYER_RADIUS * 2f;
+        for (int i = 0; i < players.size; i++) {
+            PlayerEntity a = players.get(i);
+            if (!a.alive) continue;
+            for (int j = i + 1; j < players.size; j++) {
+                PlayerEntity b = players.get(j);
+                if (!b.alive) continue;
+                float dx = b.pos.x - a.pos.x;
+                float dz = b.pos.z - a.pos.z;
+                float d2 = dx * dx + dz * dz;
+                if (d2 >= minDist * minDist || d2 < 1e-6f) continue;
+                float d = (float) Math.sqrt(d2);
+                float push = (minDist - d) * 0.5f;
+                float ux = dx / d, uz = dz / d;
+                if (a != null && !a.isRemote) {
+                    a.pos.x -= ux * push;
+                    a.pos.z -= uz * push;
+                }
+                if (b != null && !b.isRemote) {
+                    b.pos.x += ux * push;
+                    b.pos.z += uz * push;
+                }
+            }
+        }
     }
 }

@@ -318,7 +318,14 @@ public class Fx {
             }
             if (p.kind == K_TRACER) {
                 a = p.a * t;
-                emitTracer(o, p, cRight, cUp, size, r, g, b, a);
+                if (!emitTracer(o, p, cRight, cUp, size, r, g, b, a)) {
+                    // Degenerate tracer: emit a zero-area quad so the unused
+                    // slot never renders stale vertex data.
+                    vert(o + 0, p.x, p.y, p.z, r, g, b, 0f, 0, 0);
+                    vert(o + 1, p.x, p.y, p.z, r, g, b, 0f, 1, 0);
+                    vert(o + 2, p.x, p.y, p.z, r, g, b, 0f, 1, 1);
+                    vert(o + 3, p.x, p.y, p.z, r, g, b, 0f, 0, 1);
+                }
                 continue;
             }
             if (p.kind == K_FIRE) {
@@ -347,6 +354,9 @@ public class Fx {
             vert(o + 3, p.x - hx + ux, p.y - hy + uy, p.z - hz + uz, r, g, b, a, 0, 1);
         }
         if (drawCount == 0) return;
+        // The vertex data was previously written to the CPU array but never
+        // uploaded, so particles, tracers and muzzle flashes were invisible.
+        mesh.setVertices(verts, 0, drawCount * 36);
         Gdx.gl.glDisable(GL20.GL_CULL_FACE);
         Gdx.gl.glEnable(GL20.GL_BLEND);
         if (additivePass) {
@@ -366,10 +376,10 @@ public class Fx {
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
     }
 
-    private void emitTracer(int o, P p, Vector3 cRight, Vector3 cUp, float w, float r, float g, float b, float a) {
+    private boolean emitTracer(int o, P p, Vector3 cRight, Vector3 cUp, float w, float r, float g, float b, float a) {
         dir.set(p.x2 - p.x, p.y2 - p.y, p.z2 - p.z);
         float len = dir.len();
-        if (len < 0.01f) return;
+        if (len < 0.01f) return false;
         dir.scl(1f / len);
         // perpendicular toward camera for width
         right.set(dir).crs(cUp).nor().scl(w / 2f);
@@ -378,6 +388,7 @@ public class Fx {
         vert(o + 1, p.x + right.x, p.y + right.y, p.z + right.z, r, g, b, a, 1, 0);
         vert(o + 2, p.x2 + right.x, p.y2 + right.y, p.z2 + right.z, r, g, b, a, 1, 1);
         vert(o + 3, p.x2 - right.x, p.y2 - right.y, p.z2 - right.z, r, g, b, a, 0, 1);
+        return true;
     }
 
     private void vert(int o, float x, float y, float z, float r, float g, float b, float a, float u, float v) {

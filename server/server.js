@@ -232,8 +232,9 @@ function applyDamage(room, shooter, victim, dmg, head) {
       head: !!head, rt: RESPAWN_S,
     });
     if (room.mode === 'tdm') {
-      if (victim.team === 0) room.scoreB++;
-      else room.scoreA++;
+      // scoreA = team 1's score, scoreB = team 0's score.
+      if (victim.team === 0) room.scoreA++;
+      else room.scoreB++;
       broadcast(room, { t: 'ev', e: 'score', a: room.scoreA, b: room.scoreB });
     }
     checkWin(room, shooter);

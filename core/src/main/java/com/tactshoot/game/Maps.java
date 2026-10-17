@@ -360,8 +360,11 @@ public final class Maps {
 
         for (int i = 0; i < 4; i++) {
             m.props.add(new MapDef.Prop("barrel", -3 + i * 2f, 0, -12.5f, 0));
-            m.props.add(new MapDef.Prop("lamp", -16, 0, 16, 0));
         }
+        m.props.add(new MapDef.Prop("lamp", -14, 0, 14, 0));
+        m.props.add(new MapDef.Prop("lamp", 14, 0, -14, 0));
+        m.props.add(new MapDef.Prop("lamp", 14, 0, 14, 0));
+        m.props.add(new MapDef.Prop("lamp", -14, 0, -14, 0));
 
         m.addSpawnA(16, 0);
         m.addSpawnA(-16, 0);
@@ -380,15 +383,26 @@ public final class Maps {
     }
 
     private static void bunker(Array<Box> s, float cx, float cz, int mat) {
-        // 3x3 bunker with door facing the center
-        float dx = cx < 0 ? 1 : -1; // door side
+        // 3x3 bunker with a 1.2m doorway facing the arena centre.
+        // The previous version created a zero-depth "back wall" (minZ == maxZ)
+        // which left the bunker wide open and made the roof float.
+        float farZ = cz + (cz < 0f ? -1.5f : 1.5f);
+        float nearZ = cz + (cz < 0f ? 1.5f : -1.5f);
+        float wall = 0.30f;
+        // side walls
+        s.add(new Box(cx - 1.5f, 0, cz - 1.5f, cx - 1.5f + wall, 2.4f, cz + 1.5f, mat));
+        s.add(new Box(cx + 1.5f - wall, 0, cz - 1.5f, cx + 1.5f, 2.4f, cz + 1.5f, mat));
+        // solid back wall
+        s.add(new Box(cx - 1.5f, 0, farZ - wall * 0.5f, cx + 1.5f, 2.4f, farZ + wall * 0.5f, mat));
+        // front wall with a doorway in the middle
+        s.add(new Box(cx - 1.5f, 0, nearZ - wall * 0.5f, cx - 0.6f, 2.4f, nearZ + wall * 0.5f, mat));
+        s.add(new Box(cx + 0.6f, 0, nearZ - wall * 0.5f, cx + 1.5f, 2.4f, nearZ + wall * 0.5f, mat));
+        // roof
+        s.add(new Box(cx - 1.6f, 2.4f, cz - 1.6f, cx + 1.6f, 2.6f, cz + 1.6f, mat));
+        // exterior cover
+        float dx = cx < 0 ? 1 : -1;
         float dz = cz < 0 ? 1 : -1;
-        // walls: two corner L shapes, leaving a 1.2m door on the center-facing corner
-        s.add(new Box(cx - 1.5f, 0, cz - 1.5f, cx - 0.5f, 2.4f, cz + 1.5f, mat)); // left wall
-        s.add(new Box(cx + 0.5f, 0, cz - 1.5f, cx + 1.5f, 2.4f, cz + 1.5f, mat)); // right wall
-        s.add(new Box(cx - 0.5f, 0, cz - 1.5f, cx + 0.5f, 2.4f, cz + 1.5f * -1f, mat)); // back wall
-        s.add(new Box(cx - 1.5f, 2.4f, cz - 1.5f, cx + 1.5f, 2.6f, cz + 1.5f, mat)); // roof
-        s.add(Box.ground(cx + dx * 2.4f, cz + dz * 2.4f, 1.6f, 1.6f, 1.0f, M_WOOD_DARK));
+        s.add(Box.ground(cx + dx * 3f, cz + dz * 1.2f, 1.6f, 1.6f, 1.0f, M_WOOD_DARK));
     }
 
     // ================================================================ world model
@@ -618,6 +632,8 @@ public final class Maps {
             }
             ModelInstance inst = new ModelInstance(model);
             inst.transform.setToTranslationAndScaling(p.x, p.y, p.z, p.scale, p.scale, p.scale);
+            // The pipe primitive is modelled along Y; lay it down before yawing.
+            if ("pipe".equals(p.type)) inst.transform.rotate(Vector3.X, 90f);
             inst.transform.rotate(Vector3.Y, p.rot);
             out.add(inst);
         }

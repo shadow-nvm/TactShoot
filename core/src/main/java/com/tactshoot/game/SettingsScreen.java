@@ -27,9 +27,10 @@ public class SettingsScreen extends ScreenAdapter {
 
     private Stage stage;
     private TextField nameField, serverField;
-    private Label sensLabel, fovLabel, qualityLabel;
-    private CheckBox soundBox, autoFireBox, leftBox;
-    private float sens, fov;
+    private Label sensLabel, adsLabel, fovLabel, qualityLabel;
+    private CheckBox soundBox, autoFireBox, leftBox, invertBox, aimToggleBox,
+            autoSprintBox, autoQualityBox, fpsBox;
+    private float sens, adsSens, fov;
     private int quality;
 
     public SettingsScreen(TactShootGame game) {
@@ -42,6 +43,7 @@ public class SettingsScreen extends ScreenAdapter {
         this.settings = game.settings;
         this.returnScreen = returnScreen;
         sens = settings.sensitivity;
+        adsSens = settings.adsSensitivity;
         fov = settings.fov;
         quality = settings.quality;
         stage = new Stage(new ScreenViewport());
@@ -82,7 +84,7 @@ public class SettingsScreen extends ScreenAdapter {
 
         fovLabel = new Label("FIELD OF VIEW " + fov, assets.skin, "small");
         panel.add(fovLabel).right().padRight(14).pad(4);
-        Slider fovSlider = new Slider(55f, 100f, 1f, false, assets.skin);
+        Slider fovSlider = new Slider(65f, 105f, 1f, false, assets.skin);
         fovSlider.setValue(fov);
         fovSlider.addListener(new ChangeListener() {
             @Override
@@ -92,6 +94,49 @@ public class SettingsScreen extends ScreenAdapter {
             }
         });
         panel.add(fovSlider).width(340 * us).height(40 * us).pad(4).row();
+
+        adsLabel = new Label("ADS SENSITIVITY " + String.format("%.1f", adsSens), assets.skin, "small");
+        panel.add(adsLabel).right().padRight(14).pad(4);
+        Slider adsSlider = new Slider(0.3f, 1.5f, 0.1f, false, assets.skin);
+        adsSlider.setValue(adsSens);
+        adsSlider.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, com.badlogic.gdx.scenes.scene2d.Actor actor) {
+                adsSens = Math.round(adsSlider.getValue() * 10f) / 10f;
+                adsLabel.setText("ADS SENSITIVITY " + String.format("%.1f", adsSens));
+            }
+        });
+        panel.add(adsSlider).width(340 * us).height(40 * us).pad(4).row();
+
+        Label invertL = new Label("INVERT VERTICAL LOOK", assets.skin, "small");
+        invertBox = new CheckBox("", assets.skin);
+        invertBox.setChecked(settings.invertY);
+        panel.add(invertL).right().padRight(14).pad(6);
+        panel.add(invertBox).width(340 * us).pad(6).left().row();
+
+        Label aimToggleL = new Label("AIM TOGGLE (TAP ADS)", assets.skin, "small");
+        aimToggleBox = new CheckBox("", assets.skin);
+        aimToggleBox.setChecked(settings.aimToggle);
+        panel.add(aimToggleL).right().padRight(14).pad(6);
+        panel.add(aimToggleBox).width(340 * us).pad(6).left().row();
+
+        Label sprintL = new Label("AUTO SPRINT", assets.skin, "small");
+        autoSprintBox = new CheckBox("", assets.skin);
+        autoSprintBox.setChecked(settings.autoSprint);
+        panel.add(sprintL).right().padRight(14).pad(6);
+        panel.add(autoSprintBox).width(340 * us).pad(6).left().row();
+
+        Label autoQualityL = new Label("ADAPTIVE GRAPHICS", assets.skin, "small");
+        autoQualityBox = new CheckBox("", assets.skin);
+        autoQualityBox.setChecked(settings.autoQuality);
+        panel.add(autoQualityL).right().padRight(14).pad(6);
+        panel.add(autoQualityBox).width(340 * us).pad(6).left().row();
+
+        Label fpsL = new Label("SHOW FPS", assets.skin, "small");
+        fpsBox = new CheckBox("", assets.skin);
+        fpsBox.setChecked(settings.showFps);
+        panel.add(fpsL).right().padRight(14).pad(6);
+        panel.add(fpsBox).width(340 * us).pad(6).left().row();
 
         qualityLabel = new Label("GRAPHICS " + qualityName(), assets.skin, "small");
         panel.add(qualityLabel).right().padRight(14).pad(6);
@@ -151,7 +196,11 @@ public class SettingsScreen extends ScreenAdapter {
         });
         panel.add(back).colspan(2).width(420 * us).height(56 * us).pad(6);
 
-        root.add(panel);
+        com.badlogic.gdx.scenes.scene2d.ui.ScrollPane scroll =
+                new com.badlogic.gdx.scenes.scene2d.ui.ScrollPane(panel, assets.skin);
+        scroll.setFadeScrollBars(false);
+        scroll.setScrollingDisabled(true, false);
+        root.add(scroll).expand().fill();
         stage.addActor(root);
     }
 
@@ -162,11 +211,17 @@ public class SettingsScreen extends ScreenAdapter {
     private void save() {
         settings.playerName = nameField.getText().trim();
         settings.sensitivity = sens;
+        settings.adsSensitivity = adsSens;
         settings.fov = Math.round(fov);
         settings.quality = quality;
         settings.soundOn = soundBox.isChecked();
         settings.autoFire = autoFireBox.isChecked();
         settings.leftHanded = leftBox.isChecked();
+        settings.invertY = invertBox.isChecked();
+        settings.aimToggle = aimToggleBox.isChecked();
+        settings.autoSprint = autoSprintBox.isChecked();
+        settings.autoQuality = autoQualityBox.isChecked();
+        settings.showFps = fpsBox.isChecked();
         settings.server = serverField.getText().trim();
         settings.usernameSet = true;
         settings.save();

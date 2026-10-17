@@ -53,6 +53,7 @@ public class GameScreen extends ScreenAdapter implements
     private PerspectiveCamera cam;
     private ModelBatch batch;
     private boolean shadows, postOn;
+    private boolean ready;
 
     // entities
     private final Array<PlayerEntity> players = new Array<>();
@@ -63,6 +64,7 @@ public class GameScreen extends ScreenAdapter implements
     private BotAI botAi;
     private WeaponView weaponView;
     private int lastWeapon = -1;
+    private ModelInstance grenadeInst;
 
     // fx / ui
     private Fx fx;
@@ -106,6 +108,18 @@ public class GameScreen extends ScreenAdapter implements
     private final Vector3 tmpV2 = new Vector3();
     private final Vector3 tmpV3 = new Vector3();
     private final Vector3 lightDir = new Vector3();
+    private final Vector3 muzzleWorld = new Vector3();
+    private final Vector3 pelletDir = new Vector3();
+    private final Vector3 pelletRight = new Vector3();
+    private final Vector3 pelletUp = new Vector3();
+    private final Vector3 hitPoint = new Vector3();
+    private final Vector3 camRight = new Vector3();
+
+    private float camEye = 1.62f;
+    private float fps = 60f;
+    private float slowTimer;
+    private float qualityTimer;
+    private int appliedQuality = -1;
 
     public GameScreen(TactShootGame game, MatchConfig cfg) {
         this.game = game;
@@ -134,11 +148,13 @@ public class GameScreen extends ScreenAdapter implements
         local.name = settings.playerName;
         local.primaryChoice = cfg.primaryWeapon;
         local.id = 0;
+        local.alive = !online;
         players.add(local);
         byId.put(local.id, local);
 
         controller = new PlayerController(settings, assets, this);
         weaponView = new WeaponView(assets, settings);
+        grenadeInst = new ModelInstance(ModelFactory.grenade(assets.textures));
         fx = new Fx(assets);
         sky = new Atmosphere(assets);
         post = new PostFx(assets);
@@ -147,12 +163,13 @@ public class GameScreen extends ScreenAdapter implements
         sr = new ShapeRenderer();
 
         if (platform.isAndroid()) {
-            touch = new TouchControls();
+            touch = new TouchControls(settings);
             touch.setSensitivity(1f);
             touch.setAutoFireEnabled(settings.autoFire);
         } else {
             desk = new DesktopControls();
             desk.setSensitivity(1f);
+            desk.aimToggle = settings.aimToggle;
         }
         multiplexer = new InputMultiplexer();
         if (touch != null) multiplexer.addProcessor(touch);
@@ -173,42 +190,52 @@ public class GameScreen extends ScreenAdapter implements
             handleMatch(cfg.matchPayload);
         } else if (!online) {
             startPracticeMatch();
+        } else {
+            hud.banner("CONNECTING", 1.5f);
+            hud.toast("Waiting for a match...");
         }
 
         post.resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         hud.resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         if (touch != null) touch.resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-        int q = settings.quality;
-        shadows = q >= 1;
-        postOn = q >= 1;
+        shadows = settings.quality >= 1;
+        postOn = settings.quality >= 1;
+        camEye = local.eyeY();
         applyQuality();
     }
 
     // ================================================================ setup
 
     private void applyQuality() {
+        appliedQuality = settings.quality;
         if (shadowLight != null) {
-            shadowLight.dispose();
+            try { shadowLight.dispose(); } catch (Throwable ignored) {}
             shadowLight = null;
         }
+        shadows = settings.quality >= 1;
+        postOn = settings.quality >= 1;
         env.clear();
-        env.set(new ColorAttribute(ColorAttribute.AmbientLight, map == null ? 0.4f : map.ambient.r,
-                map == null ? 0.4f : map.ambient.g, map == null ? 0.4f : map.ambient.b, 1f));
+        env.set(new ColorAttribute(ColorAttribute.AmbientLight, map == null ? 0.42f : map.ambient.r,
+                map == null ? 0.42f : map.ambient.g, map == null ? 0.42f : map.ambient.b, 1f));
         if (map != null) {
-            lightDir.set(map.sunDir).scl(-1f);
+            lightDir.set(map.sunDir).scl(-1f).nor();
             env.add(new DirectionalLight().set(map.sunColor, lightDir));
         }
         if (shadows && map != null) {
             try {
-                shadowLight = new DirectionalShadowLight(1024, 1024, 90f, 90f, 1f, 160f);
+                int res = settings.quality >= 2 ? 2048 : 1024;
+                float extent = settings.quality >= 2 ? 80f : 70f;
+                shadowLight = new DirectionalShadowLight(res, res, extent, extent, 0.5f, 190f);
                 shadowLight.set(map.sunColor, lightDir);
                 env.add(shadowLight);
                 env.shadowMap = shadowLight;
             } catch (Throwable t) {
+                // A device that cannot allocate the shadow FBO must still render.
                 Gdx.app.error("TactShoot", "ShadowLight init failed, disabling shadows: " + t.getMessage());
                 shadowLight = null;
                 env.shadowMap = null;
+                shadows = false;
             }
         } else {
             shadowLight = null;
@@ -228,6 +255,7 @@ public class GameScreen extends ScreenAdapter implements
         nav = assets.navGrids[mapIdx];
         botAi = new BotAI(nav, map.solids, assets, cfg.isTdm(),
                 (bot, o, d) -> onShoot(bot, o, d, bot.currentSpec()));
+        ready = true;
         applyQuality();
     }
 
@@ -280,6 +308,8 @@ public class GameScreen extends ScreenAdapter implements
         if (e.isLocal) {
             controller.reset(e);
             lastWeapon = -1;
+            camEye = e.eyeY();
+            if (touch != null) touch.setEnabled(true);
         }
     }
 
@@ -508,7 +538,7 @@ public class GameScreen extends ScreenAdapter implements
                     victim.lastDamageTime = gameTime();
                     if (v == myNetId) {
                         PlayerEntity shooter = byId.get(f);
-                        if (shooter != null) hud.showDamage(shooter.yaw);
+                        if (shooter != null) hud.showDamage(damageYawFrom(shooter));
                         assets.play(Assets.S_DAMAGE);
                         platform.vibrate(head ? 40 : 20);
                     }
@@ -622,21 +652,31 @@ public class GameScreen extends ScreenAdapter implements
         return Vector3.dst(x, y, z, local.pos.x, local.pos.y + 1.6f, local.pos.z);
     }
 
+    /** World-space yaw pointing from the local player toward an attacker. */
+    private float damageYawFrom(PlayerEntity attacker) {
+        return (float) Math.atan2(attacker.pos.z - local.pos.z, attacker.pos.x - local.pos.x);
+    }
+
     // ================================================================ shooting
 
     @Override
     public void onShoot(PlayerEntity shooter, Vector3 origin, Vector3 dir, Weapons.Spec spec) {
-        // muzzle world pos
-        Vector3 muzzle = T.tmp1.set(origin).mulAdd(dir, 0.55f);
-        fx.muzzleFlash(muzzle.x, muzzle.y, muzzle.z, dir.x, dir.y, dir.z);
-        // eject shell
-        Vector3 right = T.tmp2.set(MathUtils.sin(shooter.yaw), 0f, -MathUtils.cos(shooter.yaw));
-        fx.shell(muzzle.x + right.x * 0.22f, muzzle.y - 0.1f, muzzle.z + right.z * 0.22f,
-                settings.leftHanded ? -right.x : right.x, settings.leftHanded ? -right.z : right.z);
+        // Muzzle position. The old implementation stored this in T.tmp1 and
+        // then reused T.tmp1 for the spread basis, so every tracer started at
+        // the world origin (0, 1, 0).
+        muzzleWorld.set(origin).mulAdd(dir, 0.48f);
+        fx.muzzleFlash(muzzleWorld.x, muzzleWorld.y, muzzleWorld.z, dir.x, dir.y, dir.z);
+
+        pelletRight.set(-MathUtils.sin(shooter.yaw), 0f, MathUtils.cos(shooter.yaw));
+        float eject = settings.leftHanded ? -1f : 1f;
+        fx.shell(muzzleWorld.x + pelletRight.x * 0.22f * eject,
+                muzzleWorld.y - 0.1f,
+                muzzleWorld.z + pelletRight.z * 0.22f * eject,
+                pelletRight.x * eject, pelletRight.z * eject);
 
         if (shooter == local) {
             weaponView.onFire();
-            muzzleLightPos.set(muzzle).add(dir.x * 0.4f, dir.y * 0.4f, dir.z * 0.4f);
+            muzzleLightPos.set(muzzleWorld).add(dir.x * 0.4f, dir.y * 0.4f, dir.z * 0.4f);
             muzzleLightIntensity = 14f;
             if (online) {
                 net.send(NetClient.obj("t", "shoot",
@@ -655,19 +695,15 @@ public class GameScreen extends ScreenAdapter implements
                     : Assets.S_SHOT_AR, distToLocal(origin.x, origin.y, origin.z));
         }
 
-        // hitscan per pellet
-        Vector3 pelletDir = T.tmp3;
-        Vector3 rightV = T.tmp4.set(MathUtils.sin(shooter.yaw), 0f, -MathUtils.cos(shooter.yaw));
-        Vector3 upV = T.tmp1.set(0, 1, 0);
+        // Hitscan per pellet.
         for (int p = 0; p < spec.pellets; p++) {
             pelletDir.set(dir);
             if (spec.pellets > 1) {
                 float s = 0.055f;
-                pelletDir.mulAdd(rightV, MathUtils.random(-s, s))
-                        .mulAdd(upV, MathUtils.random(-s, s)).nor();
+                pelletDir.mulAdd(pelletRight, MathUtils.random(-s, s))
+                        .mulAdd(pelletUp.set(0f, 1f, 0f), MathUtils.random(-s, s)).nor();
             }
             float range = spec.range * 2.2f;
-            // player hit
             PlayerEntity victim = null;
             float victimDist = Float.MAX_VALUE;
             for (int i = 0; i < players.size; i++) {
@@ -681,13 +717,12 @@ public class GameScreen extends ScreenAdapter implements
                 }
             }
             Collision.Hit wallHit = Collision.rayWorld(origin, pelletDir, range, map.solids);
-            Vector3 hitPoint;
             if (victim != null && victimDist < wallHit.dist) {
-                hitPoint = T.tmp2.set(pelletDir).scl(victimDist).add(origin);
-                fx.tracer(muzzle.x, muzzle.y, muzzle.z, hitPoint.x, hitPoint.y, hitPoint.z,
-                        1f, 0.9f, 0.55f);
+                hitPoint.set(pelletDir).scl(victimDist).add(origin);
+                fx.tracer(muzzleWorld.x, muzzleWorld.y, muzzleWorld.z,
+                        hitPoint.x, hitPoint.y, hitPoint.z, 1f, 0.9f, 0.55f);
                 fx.blood(hitPoint.x, hitPoint.y, hitPoint.z, pelletDir.x, pelletDir.y, pelletDir.z);
-                boolean head = hitPoint.y > victim.pos.y + 1.42f;
+                boolean head = hitPoint.y > victim.pos.y + victim.height() * 0.86f;
                 float falloff = victimDist <= spec.range ? 1f
                         : Math.max(spec.falloffMin, 1f - (victimDist - spec.range) / spec.range * (1f - spec.falloffMin));
                 float dmg = spec.damage * falloff * (head ? spec.headMult : 1f);
@@ -695,17 +730,17 @@ public class GameScreen extends ScreenAdapter implements
                     applyDamage(shooter, victim, dmg, head);
                 }
             } else if (wallHit.hit) {
-                hitPoint = wallHit.point;
-                fx.tracer(muzzle.x, muzzle.y, muzzle.z, hitPoint.x, hitPoint.y, hitPoint.z,
-                        0.9f, 0.75f, 0.45f);
+                hitPoint.set(wallHit.point);
+                fx.tracer(muzzleWorld.x, muzzleWorld.y, muzzleWorld.z,
+                        hitPoint.x, hitPoint.y, hitPoint.z, 0.9f, 0.75f, 0.45f);
                 fx.impactSparks(hitPoint.x, hitPoint.y, hitPoint.z,
                         wallHit.normal.x, wallHit.normal.y, wallHit.normal.z, true);
             } else {
-                // long miss: fade the tracer out
-                float endD = Math.min(range, 55f);
-                fx.tracer(muzzle.x, muzzle.y, muzzle.z,
-                        muzzle.x + pelletDir.x * endD, muzzle.y + pelletDir.y * endD,
-                        muzzle.z + pelletDir.z * endD, 1f, 0.85f, 0.5f);
+                float endD = Math.min(range, 70f);
+                fx.tracer(muzzleWorld.x, muzzleWorld.y, muzzleWorld.z,
+                        muzzleWorld.x + pelletDir.x * endD,
+                        muzzleWorld.y + pelletDir.y * endD,
+                        muzzleWorld.z + pelletDir.z * endD, 1f, 0.85f, 0.5f);
             }
         }
     }
@@ -714,7 +749,7 @@ public class GameScreen extends ScreenAdapter implements
         if (!victim.alive || ended) return;
         victim.takeDamage(dmg, gameTime());
         if (victim == local) {
-            hud.showDamage(shooter.yaw);
+            hud.showDamage(damageYawFrom(shooter));
             assets.play(Assets.S_DAMAGE);
             platform.vibrate(head ? 40 : 20);
         }
@@ -745,8 +780,10 @@ public class GameScreen extends ScreenAdapter implements
         hud.addFeed(shooter.name, victim.name, shooter.currentSpec().name,
                 head, feedColor(shooter), feedColor(victim));
         if (cfg.isTdm()) {
-            if (victim.team == 0) scoreB++;
-            else scoreA++;
+            // scoreA belongs to team 1, scoreB to team 0. Killing a team 0
+            // player therefore scores for team 1.
+            if (victim.team == 0) scoreA++;
+            else scoreB++;
         }
         checkWin();
     }
@@ -796,6 +833,9 @@ public class GameScreen extends ScreenAdapter implements
                 if (owner != null && owner.friendlyTo(victim, cfg.isTdm())) continue;
                 float d = Vector3.dst(g.x, g.y, g.z, victim.pos.x, victim.pos.y + 1f, victim.pos.z);
                 if (d > Weapons.GRENADE_RADIUS) continue;
+                // Walls stop blast damage; otherwise grenades kill through cover.
+                tmpV2.set(victim.pos.x, victim.pos.y + 1f, victim.pos.z);
+                if (!Collision.lineOfSight(tmpV.set(g.x, g.y + 0.1f, g.z), tmpV2, map.solids)) continue;
                 float t = d / Weapons.GRENADE_RADIUS;
                 float dmg = Weapons.GRENADE_MIN_DAMAGE
                         + (Weapons.GRENADE_DAMAGE - Weapons.GRENADE_MIN_DAMAGE) * (1f - t);
@@ -811,7 +851,7 @@ public class GameScreen extends ScreenAdapter implements
         g.y = origin.y + dir.y * 0.4f;
         g.z = origin.z + dir.z * 0.4f;
         g.vx = dir.x * Weapons.GRENADE_THROW_SPEED;
-        g.vy = dir.y * Weapons.GRENADE_THROW_SPEED + 1.4f;
+        g.vy = dir.y * Weapons.GRENADE_THROW_SPEED + 1.35f;
         g.vz = dir.z * Weapons.GRENADE_THROW_SPEED;
         g.fuse = Weapons.GRENADE_FUSE;
         g.ownerId = e.id;
@@ -972,12 +1012,9 @@ public class GameScreen extends ScreenAdapter implements
     public void show() {
         Gdx.input.setInputProcessor(multiplexer);
         Gdx.input.setCursorCatched(!platform.isAndroid() && !paused);
-        if (paused) {
-            shadows = settings.quality >= 1;
-            postOn = settings.quality >= 1;
-            applyQuality();
-            if (touch != null) touch.setAutoFireEnabled(settings.autoFire);
-        }
+        if (desk != null) desk.aimToggle = settings.aimToggle;
+        if (touch != null) touch.setAutoFireEnabled(settings.autoFire);
+        if (appliedQuality != settings.quality) applyQuality();
     }
 
     @Override
@@ -1023,30 +1060,42 @@ public class GameScreen extends ScreenAdapter implements
         if (net != null) net.update();
         hud.update(dt);
 
+        float raw = Math.max(0.0001f, Gdx.graphics.getDeltaTime());
+        fps += (1f / raw - fps) * 0.06f;
+
         InputState in;
         if (touch != null) {
-            touch.pollLook();
             touch.updateState();
             in = touch.state;
         } else {
+            if (hud.isChatMode() && Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+                hud.hideChat();
+            }
+            if (desk != null) {
+                desk.setEnabled(!hud.isChatMode());
+                desk.setLookEnabled(!hud.isChatMode());
+            }
             desk.poll();
             in = desk.state;
         }
 
+        // Pause / resume. The old order cleared pausePressed before testing it,
+        // so Escape and the Android back button could never resume a match.
+        if (in.pausePressed) {
+            if (paused) onResume();
+            else doPause();
+            in.resetFrame();
+            return;
+        }
         if (paused) {
             in.resetFrame();
-            if (in.pausePressed) {
-                onResume();
-            }
+            return;
+        }
+        if (!ready || map == null) {
+            in.resetFrame();
             return;
         }
         if (ended) {
-            in.resetFrame();
-            return;
-        }
-
-        if (in.pausePressed) {
-            doPause();
             in.resetFrame();
             return;
         }
@@ -1155,6 +1204,15 @@ public class GameScreen extends ScreenAdapter implements
             }
         }
 
+        // Combatants should not share the same body space.
+        Collision.separatePlayers(players);
+        for (int i = 0; i < players.size; i++) {
+            PlayerEntity p = players.get(i);
+            if (p.isLocal || !p.alive || !p.moving) continue;
+            float sp = (float) Math.sqrt(p.vel.x * p.vel.x + p.vel.z * p.vel.z);
+            p.bobPhase += sp * dt * 1.4f;
+        }
+
         // remote interpolation
         float renderTime = gameTime() - NetConfig.INTERP_DELAY;
         for (int i = 0; i < players.size; i++) {
@@ -1164,28 +1222,46 @@ public class GameScreen extends ScreenAdapter implements
             }
         }
 
-        // grenades
+        // grenades: axis-separated bounce, fuse detonation (never on impact)
         for (int i = grenades.size - 1; i >= 0; i--) {
             Grenade g = grenades.get(i);
-            g.x += g.vx * dt;
-            g.y += g.vy * dt;
-            g.z += g.vz * dt;
-            g.vy -= 9.8f * dt;
+            float step = Math.min(dt, 0.033f);
+            g.vy -= 9.8f * step;
+            g.fuse -= dt;
+
+            float nx = g.x + g.vx * step;
+            if (grenadeHitsWorld(nx, g.y, g.z)) {
+                g.vx = -g.vx * 0.45f;
+            } else {
+                g.x = nx;
+            }
+            float ny = g.y + g.vy * step;
+            if (grenadeHitsWorld(g.x, ny, g.z)) {
+                g.vy = -g.vy * 0.40f;
+                if (Math.abs(g.vy) < 0.7f) g.vy = 0f;
+            } else {
+                g.y = ny;
+            }
+            float nz = g.z + g.vz * step;
+            if (grenadeHitsWorld(g.x, g.y, nz)) {
+                g.vz = -g.vz * 0.45f;
+            } else {
+                g.z = nz;
+            }
+            if (g.y < 0.07f) {
+                g.y = 0.07f;
+                if (g.vy < -0.6f) g.vy = -g.vy * 0.40f;
+                else g.vy = 0f;
+                g.vx *= 0.74f;
+                g.vz *= 0.74f;
+            }
+
             g.trail -= dt;
             if (g.trail <= 0f) {
-                g.trail = 0.03f;
+                g.trail = 0.04f;
                 fx.grenadeTrail(g.x, g.y, g.z);
             }
-            g.fuse -= dt;
-            boolean hitWall = false;
-            for (Box b : map.solids) {
-                if (g.x > b.minX && g.x < b.maxX && g.y > b.minY && g.y < b.maxY
-                        && g.z > b.minZ && g.z < b.maxZ) {
-                    hitWall = true;
-                    break;
-                }
-            }
-            if (hitWall || g.y <= 0.03f || g.fuse <= 0f) {
+            if (g.fuse <= 0f) {
                 explodeGrenade(g);
                 grenades.removeIndex(i);
             }
@@ -1196,12 +1272,23 @@ public class GameScreen extends ScreenAdapter implements
         float speed = (float) Math.sqrt(local.vel.x * local.vel.x + local.vel.z * local.vel.z);
         weaponView.update(dt, local, speed);
 
-        tmpV.set(local.pos.x, local.pos.y + local.eyeY(), local.pos.z);
+        // Smooth crouch height, walking head-bob and landing dip.
+        float targetEye = local.crouching ? 1.02f : 1.62f;
+        camEye += (targetEye - camEye) * T.damp(13f, dt);
+        float bobScale = local.aiming ? 0.22f : (local.sprinting ? 1.35f : 1f);
+        float bobX = MathUtils.cos(local.bobPhase * 0.95f) * 0.014f * bobScale;
+        float bobY = MathUtils.sin(local.bobPhase * 1.9f) * 0.019f * bobScale;
+        camRight.set(-MathUtils.sin(local.yaw), 0f, MathUtils.cos(local.yaw));
+        tmpV.set(local.pos.x + camRight.x * bobX,
+                local.pos.y + camEye + bobY - local.landImpact * 0.22f,
+                local.pos.z + camRight.z * bobX);
         cam.position.set(tmpV);
         T.dirFromAngles(local.yaw, local.pitch, cam.direction);
         cam.up.set(0f, 1f, 0f);
-        float targetFov = local.aiming && local.alive
-                ? local.currentSpec().adsFov : settings.fov;
+        float hFov = local.aiming && local.alive
+                ? local.currentSpec().adsFov
+                : settings.fov + (local.sprinting ? 4f : 0f);
+        float targetFov = hFovToV(hFov, cam.viewportWidth / Math.max(1f, cam.viewportHeight));
         cam.fieldOfView += (targetFov - cam.fieldOfView) * T.damp(13f, dt);
         cam.update();
 
@@ -1218,11 +1305,30 @@ public class GameScreen extends ScreenAdapter implements
                 local.weapon == 0 ? local.currentSpec().name : "PISTOL");
         hud.setTimer(T.fmtTime(matchTime));
         if (cfg.isTdm()) {
-            hud.setScore(scoreA + "  -  " + scoreB);
+            // scoreA = team 1 kills, scoreB = team 0 kills. Show own team first.
+            int own = local.team == 0 ? scoreB : scoreA;
+            int enemy = local.team == 0 ? scoreA : scoreB;
+            hud.setScore(own + "  -  " + enemy);
         } else {
             hud.setScore(local.kills + " / " + NetConfig.FFA_KILL_LIMIT);
         }
         hud.setPing(online ? (net != null ? net.rtt() : -1f) : -1f);
+        hud.setFps(settings.showFps ? fps : -1f);
+
+        // Adaptive quality: high-end effects must never make the game unplayable.
+        qualityTimer += dt;
+        if (settings.autoQuality && settings.quality > 0 && qualityTimer > 5f && !ended) {
+            if (fps < 42f) slowTimer += dt;
+            else slowTimer = Math.max(0f, slowTimer - dt * 1.5f);
+            if (slowTimer > 3.5f) {
+                settings.quality--;
+                settings.save();
+                applyQuality();
+                slowTimer = 0f;
+                qualityTimer = 0f;
+                hud.toast("Auto graphics: " + settings.qualityName());
+            }
+        }
 
         // net send
         if (online) {
@@ -1247,18 +1353,20 @@ public class GameScreen extends ScreenAdapter implements
         float dt = Math.min(delta, 0.1f);
         update(dt);
 
-        if (postOn && !paused) {
-            post.begin();
+        if (!ready || map == null) {
+            Gdx.gl.glClearColor(0.035f, 0.045f, 0.065f, 1f);
+            Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
+            hud.draw(uiBatch);
+            return;
         }
-        Gdx.gl.glClearColor(map.fogCol.r, map.fogCol.g, map.fogCol.b, 1f);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 
-        sky.render(cam, map);
-
-        // shadow pass
+        // Shadow pass MUST run before the post buffer is bound. Frame buffers
+        // nest badly: DirectionalShadowLight.end() rebinds the default
+        // framebuffer, so running it inside the post pass sent the world to the
+        // screen, which the post pass then covered with its own (sky-only) buffer.
         if (shadows && shadowLight != null) {
-            tmpV.set(local.pos).add(0f, 2f, 0f);
-            tmpV2.set(map.sunDir).scl(60f).add(tmpV);
+            T.dirFromAngles(local.yaw, 0f, tmpV2);
+            tmpV.set(local.pos.x + tmpV2.x * 12f, 2f, local.pos.z + tmpV2.z * 12f);
             shadowLight.begin(tmpV, lightDir);
             batch.begin(shadowLight.getCamera());
             renderWorld();
@@ -1267,10 +1375,19 @@ public class GameScreen extends ScreenAdapter implements
             shadowLight.end();
         }
 
+        if (postOn && !paused) {
+            post.begin();
+        }
+        Gdx.gl.glClearColor(map.fogCol.r, map.fogCol.g, map.fogCol.b, 1f);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
+
+        sky.render(cam, map);
+
         // main pass
         batch.begin(cam);
         renderWorld();
         renderPlayers();
+        renderGrenades();
         batch.end();
 
         fx.render(cam, true);
@@ -1294,10 +1411,12 @@ public class GameScreen extends ScreenAdapter implements
     }
 
     private void renderWorld() {
-        batch.render(worldInst);
+        // Passing the environment is essential: without it DefaultShader has
+        // no lights and draws every world surface black.
+        batch.render(worldInst, env);
         if (props != null) {
             for (int i = 0; i < props.size; i++) {
-                batch.render(props.get(i));
+                batch.render(props.get(i), env);
             }
         }
     }
@@ -1318,11 +1437,45 @@ public class GameScreen extends ScreenAdapter implements
                 }
                 soldierInst.put(e.id, mi);
             }
+            // The soldier model faces +Z. Rotating by (90 - yaw) maps +Z onto
+            // the yaw direction; the old (+90) rotated every enemy backwards.
+            float walk = e.moving ? MathUtils.sin(e.bobPhase * 5f) * 2.4f : 0f;
+            float crouch = T.clamp(e.crouchAmount, 0f, 1f);
             mi.transform.idt()
                     .translate(e.pos.x, e.pos.y, e.pos.z)
-                    .rotate(Vector3.Y, e.yaw * MathUtils.radiansToDegrees + 90f)
-                    .scale(1f, e.crouching ? 0.80f : 1f, 1f);
+                    .rotate(Vector3.Y, 90f - e.yaw * MathUtils.radiansToDegrees)
+                    .rotate(Vector3.X, walk)
+                    .scale(1f, 1f - crouch * 0.36f, 1f);
             batch.render(mi, env);
         }
+    }
+
+    private void renderGrenades() {
+        if (grenadeInst == null) return;
+        for (int i = 0; i < grenades.size; i++) {
+            Grenade g = grenades.get(i);
+            grenadeInst.transform.idt()
+                    .translate(g.x, g.y, g.z)
+                    .rotate(Vector3.Y, (g.fuse * 480f) % 360f);
+            batch.render(grenadeInst, env);
+        }
+    }
+
+    private boolean grenadeHitsWorld(float x, float y, float z) {
+        for (int i = 0; i < map.solids.size; i++) {
+            Box b = map.solids.get(i);
+            if (x > b.minX - 0.05f && x < b.maxX + 0.05f
+                    && y > b.minY - 0.05f && y < b.maxY + 0.05f
+                    && z > b.minZ - 0.05f && z < b.maxZ + 0.05f) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Converts a horizontal FOV in degrees to libGDX's vertical FOV. */
+    private static float hFovToV(float hDeg, float aspect) {
+        float h = hDeg * MathUtils.degreesToRadians * 0.5f;
+        return (float) (2.0 * Math.atan(Math.tan(h) / aspect) * MathUtils.radiansToDegrees);
     }
 }

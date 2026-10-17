@@ -27,6 +27,18 @@ run {
     setIgnoreExitValue(true)
 }
 
+// Temporary render smoke check, used by the agent verification pass.
+tasks.register('smokeRender', JavaExec) {
+    group = 'verification'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.tactshoot.game.desktop.SmokeMain'
+    workingDir = rootProject.file('assets')
+    systemProperty 'tactshoot.quality', System.getenv('TACTSHOOT_QUALITY') ?: '2'
+    systemProperty 'tactshoot.mode', System.getenv('TACTSHOOT_MODE') ?: 'game'
+    systemProperty 'tactshoot.out', rootProject.file('build/smoke').absolutePath
+    setIgnoreExitValue(true)
+}
+
 tasks.withType(JavaExec).configureEach {
     if (System.getProperty('os.name').toLowerCase().contains('mac')) {
         jvmArgs += '-XstartOnFirstThread'

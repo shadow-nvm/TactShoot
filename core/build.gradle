@@ -16,3 +16,18 @@ dependencies {
     api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
     api "org.java-websocket:Java-WebSocket:$wsVersion"
 }
+
+sourceSets {
+    test {
+        java.srcDirs = ['src/test/java']
+    }
+}
+
+// Headless movement/collision regression checks: gradlew :core:physicsCheck
+tasks.register('physicsCheck', JavaExec) {
+    group = 'verification'
+    description = 'Runs headless player physics checks.'
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.tactshoot.game.PhysicsCheck'
+}

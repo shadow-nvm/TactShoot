@@ -46,6 +46,8 @@ public class PlayerEntity {
     public boolean onGround;
 
     public float bobPhase;
+    public float crouchAmount;                   // 0..1 smoothed, render only
+    public float landImpact;                     // 0..1 camera landing dip
     public float lastDamageTime = -99f;
     public float afkTime;
 
@@ -87,6 +89,8 @@ public class PlayerEntity {
         weapon = 0;
         aiming = false;
         crouching = false;
+        crouchAmount = 0f;
+        landImpact = 0f;
         firing = false;
         sprinting = false;
         vel.setZero();
