@@ -47,6 +47,21 @@ android {
     }
 }
 
+// On-device touch checks: gradlew :android:emulatorCheck
+// Installs the debug APK on a running (or freshly booted) emulator, drives real
+// touch gestures and asserts joystick, look and fire behaviour from logcat.
+tasks.register('emulatorCheck', Exec) {
+    group = 'verification'
+    description = 'Installs the debug APK on an emulator and verifies touch input.'
+    dependsOn 'assembleDebug'
+    workingDir rootProject.projectDir
+    def pythonBin = System.getenv('PYTHON') ?: (System.getProperty('os.name')
+            .toLowerCase().contains('windows') ? 'python' : 'python3')
+    commandLine pythonBin, rootProject.file('tools/emulator_check.py').absolutePath,
+            '--apk', layout.buildDirectory.file('outputs/apk/debug/android-debug.apk')
+            .get().asFile.absolutePath
+}
+
 configurations { natives }
 
 dependencies {

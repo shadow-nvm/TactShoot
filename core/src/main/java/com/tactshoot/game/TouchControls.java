@@ -114,6 +114,30 @@ public class TouchControls implements InputProcessor {
         h = height;
     }
 
+    // ---------------------------------------------------------------- layout access
+    // Used by DebugProbe so the automated input check swipes the real controls
+    // instead of duplicating this layout math in the test driver.
+
+    public int width() {
+        return w;
+    }
+
+    public int height() {
+        return h;
+    }
+
+    public float stickCenterX() {
+        return stickBaseX();
+    }
+
+    public float stickCenterY() {
+        return stickBaseY();
+    }
+
+    public float stickRadius() {
+        return Math.min(w, h) * 0.14f;
+    }
+
     public void setEnabled(boolean e) {
         enabled = e;
         if (!e) {
@@ -148,6 +172,18 @@ public class TouchControls implements InputProcessor {
         fireLock = false;
     }
 
+    public float fireX() {
+        return fx();
+    }
+
+    public float fireY() {
+        return fy();
+    }
+
+    public float fireRadius() {
+        return fr();
+    }
+
     public boolean inCircle(float x, float y, float cx, float cy, float r) {
         float dx = x - cx, dy = y - cy;
         return dx * dx + dy * dy <= r * r;
@@ -158,6 +194,7 @@ public class TouchControls implements InputProcessor {
         if (!enabled) return false;
         float x = screenX;
         float y = h - screenY;
+        DebugProbe.touch(x, y);
 
         // Buttons are tested first so dragging over them never steals the look.
         if (inCircle(x, y, px(), py(), pr())) {

@@ -10,6 +10,7 @@ import android.view.WindowManager;
 
 import com.badlogic.gdx.backends.android.AndroidApplication;
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration;
+import com.tactshoot.game.DebugProbe;
 import com.tactshoot.game.Platform;
 import com.tactshoot.game.TactShootGame;
 
@@ -24,6 +25,14 @@ public class AndroidLauncher extends AndroidApplication implements Platform {
         cfg.useImmersiveMode = true;
         cfg.renderUnderCutout = Build.VERSION.SDK_INT >= 28;
         cfg.disableAudio = false;
+        // Automated input checks (tools/emulator_check.py) enable logcat
+        // telemetry and jump into a match through intent extras. Nothing is
+        // emitted unless a caller explicitly asks for it.
+        Intent intent = getIntent();
+        DebugProbe.enabled = intent != null
+                && intent.getBooleanExtra("tactshoot.debugInput", false);
+        DebugProbe.autostartPractice = intent != null
+                && intent.getBooleanExtra("tactshoot.autostartPractice", false);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         initialize(new TactShootGame(this), cfg);
     }

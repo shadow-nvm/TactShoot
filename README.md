@@ -41,11 +41,20 @@ WASD move, mouse look, LMB fire, RMB aim, R reload, Q switch, G grenade, C crouc
 
 ```
 gradlew.bat :core:physicsCheck          # headless movement/collision regression tests
+gradlew.bat :core:inputCheck            # headless touch joystick/look/fire direction tests
 gradlew.bat :desktop:smokeRender        # boots a bot match and writes screenshots to build/smoke
+gradlew.bat :android:emulatorCheck      # installs the APK on an emulator and drives real touch input
 ```
 
 `smokeRender` accepts `TACTSHOOT_QUALITY=0|1|2` (graphics preset) and `TACTSHOOT_MODE=game|gun`
 (full match or weapon-viewmodel only) so every quality tier can be verified from a terminal.
+
+`emulatorCheck` needs a running emulator (or an installed AVD it can boot headlessly). It starts
+the game with `--ez tactshoot.debugInput true --ez tactshoot.autostartPractice true`, which turns
+on `TSDBG` logcat telemetry and jumps straight into a bot match. The script then swipes the
+joystick, drags the look area and holds the fire button through `adb shell input`, and asserts the
+game's own reported position, yaw and ammo. Pass `--check-env` to see the SDK/AVD it will use, or
+`--self-test` to validate the driver's parsing and assertions on a machine without an emulator.
 
 ### 3. Run the multiplayer server
 

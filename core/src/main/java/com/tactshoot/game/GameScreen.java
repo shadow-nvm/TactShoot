@@ -198,6 +198,7 @@ public class GameScreen extends ScreenAdapter implements
         post.resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         hud.resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         if (touch != null) touch.resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        DebugProbe.layout(touch);
 
         shadows = settings.quality >= 1;
         postOn = settings.quality >= 1;
@@ -1025,6 +1026,7 @@ public class GameScreen extends ScreenAdapter implements
         post.resize(width, height);
         hud.resize(width, height);
         if (touch != null) touch.resize(width, height);
+        DebugProbe.layout(touch);
     }
 
     @Override
@@ -1342,6 +1344,9 @@ public class GameScreen extends ScreenAdapter implements
         // post fx
         post.setDamage(hud.damageFlash());
         post.setLowHp(local.alive && local.hp <= 30f && !ended ? 1f : 0f);
+
+        // Automated input checks read these logcat samples.
+        if (touch != null) DebugProbe.frame(dt, local, in);
 
         in.resetFrame();
     }

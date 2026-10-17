@@ -31,3 +31,12 @@ tasks.register('physicsCheck', JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
     mainClass = 'com.tactshoot.game.PhysicsCheck'
 }
+
+// Headless touch-control checks: gradlew :core:inputCheck
+tasks.register('inputCheck', JavaExec) {
+    group = 'verification'
+    description = 'Runs headless touch joystick/look/fire direction checks.'
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.tactshoot.game.InputCheck'
+}
